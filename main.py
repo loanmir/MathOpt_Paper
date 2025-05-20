@@ -55,5 +55,6 @@ if knapsack.status == gb.GRB.OPTIMAL:
 
 else:
     print("No optimal solution found.")
+    print("test change code")
 
 
