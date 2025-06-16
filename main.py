@@ -10,10 +10,28 @@ ILP_Model = gb.Model("Electric_Bus_Model")
 t = []
 j = []
 r = []
-b = []
+b_bus_types = [1, 2, 3, 4, 5, 6] #[E433, E420, E321, E490, 321D, 420D]
 c = []
 s = []
 
+# BUS INPUTS
+cap_b = [153, 87, 85, 75, 90, 90] # passenger capacity of respective bus-types
+d_b_MAX = [15, 20, 40, 25, 15, 15] # driving range of fully charged b-type electric bus
+ct_rjbc = [6, 6, 10, 6, 40, 30] # charging time of b-type electric bus at c-type charging point of NON-DEPOT stop j of route r
+cbus_b = [500000, 350000, 400000, 400000, 300000, 330000] # b-type electric bus capital cost (initial investment for buying bus)
+vcb_rb = [270000, 180000, 200000, 170000, 180000, 200000] # variable cost of b-type electric bus on route r
+
+# COST INPUTS
+ccp_c = 120000 # CAPITAL COST of one c-type charging point
+vcp_c = 4500 # VARIABLE COST of one c-type charging point
+ccc_j = 5000 # CAPITAL COST of one charger at stop j
+vcc_j = 500 # VARIABLE COST of one charger at stop j
+ccps_t = 200000 # CAPITAL COST of a power station at t
+cl_tj = 5000 # cost of linking power station spot t and stop j -> cl_tj = 0 if t is old and j has an old charger stop
+
+
+
+# VARIABLES!!!!!!
 
 # Quantity of new buses variables
 nb_rbc = ILP_Model.addVars(r, b, c, vtype=gb.GRB.INTEGER, name="nb_rbc")
