@@ -96,9 +96,25 @@ y_jrbc_s = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [b fo
 
 #-------------------------------- Constraints --------------------------------#
 
+# (2)
 
 
+# (3)
 
+ILP_Model.addConstr(
+    gb.quicksum(vcc_j * ns_j[j] + gb.quicksum(vcp_c[c] * np_jc[j, c] for c in C) for j in N) +
+    gb.quicksum(vcb_rb[r, b] for r in R for b in B_bus_types[r]) <= uoc
+)
+                    # ???????
+
+ILP_Model.addConstr(
+    gb.quicksum(vcc[j] * ns[j] + gb.quicksum(vcp[c] * np[j, c] for c in C) for j in N) +
+    gb.quicksum(vcb[r, b] for r in R for b in B_bus_types[r])
+    <= uoc,
+    name="capacity_constraint"
+)
+
+# (4)
 
 
 
