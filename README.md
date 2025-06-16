@@ -2,7 +2,7 @@
 
 ## Decision Variables
 
-1) variables related to the quantity of newbuses
+1) variables related to the quantity of new buses
 
     - **nb_rbc** : number of new b-type electric buses assigned to route r and charged at a c-type charger
     - **y_rbc** : binary indicator equal to 1 if and only if a new b-type electric bus is assigned to route r
