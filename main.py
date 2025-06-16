@@ -1,12 +1,10 @@
 import gurobipy as gb
 import numpy as np
 
-### PROVAAAAAAAAAA GIT COMMITTT
-
 # Initializing the model
 ILP_Model = gb.Model("Electric_Bus_Model")
 
-# Parameters
+# PARAMETERS!!!!!!
 t = []
 j = []
 r = []
@@ -33,6 +31,8 @@ cl_tj = 5000 # cost of linking power station spot t and stop j -> cl_tj = 0 if t
 
 # VARIABLES!!!!!!
 
+#-------------------------------- MAIN decision variables------------------------------#
+
 # Quantity of new buses variables
 nb_rbc = ILP_Model.addVars(r, b_bus_types, c, vtype=gb.GRB.INTEGER, name="nb_rbc")
 y_rbc = ILP_Model.addVars(r, b_bus_types, c, vtype=gb.GRB.BINARY, name="y_rbc")
@@ -57,6 +57,11 @@ gamma_tj = ILP_Model.addVars(t, j, vtype=gb.GRB.BINARY, name="gamma_tj")
 Z_r = ILP_Model.addVars(r, vtype=gb.GRB.INTEGER, name="Z_r")
 nv_rb = ILP_Model.addVars(r, b_bus_types, vtype=gb.GRB.INTEGER, name="nv_rb")
 
+#--------------------------------------------------------------------------------------#
+
+
+#-------------------------------- Constraints variables--------------------------------#
+
 # from (31) to (42)
 eta_jrc_1 = ILP_Model.addVars(j, r, c, vtype=gb.GRB.BINARY, name="eta_jrc_1")
 eta_jrc_2 = ILP_Model.addVars(j, r, c, vtype=gb.GRB.BINARY, name="eta_jrc_2")
@@ -70,7 +75,7 @@ nc_jrc_ct = ILP_Model.addVars(j, r, c, vtype=gb.GRB.INTEGER, name="nc_jrc_ct")
 # from (43) to (44)
 y_jrbc_s = ILP_Model.addVars(j, r, b_bus_types, c, vtype=gb.GRB.BINARY, name="y_jrbc_s")
 
-
+#-------------------------------------------------------------------------------------#
 
 
 
