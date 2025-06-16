@@ -14,10 +14,25 @@ c = []
 s = []
 
 
-
-
 # Quantity of new buses variables
-nb_rbc = ILP_Model.addVars(r, b, c, vtype=gb.GRB.BINARY, name="nb_rbc")
+nb_rbc = ILP_Model.addVars(r, b, c, vtype=gb.GRB.INTEGER, name="nb_rbc")
+y_rbc = ILP_Model.addVars(r, b, c, vtype=gb.GRB.BINARY, name="y_rbc")
+y_r = ILP_Model.addVars(r, vtype=gb.GRB.BINARY, name="nb_rbc")
+
+# Variables related to the assignment of electric buses for charging
+y_rbc_s = ILP_Model.addVars(r, b, c, s, vtype=gb.GRB.BINARY, name="y_rbc_s")
+y_bc = ILP_Model.addVars(b, c, vtype=gb.GRB.BINARY, name="y_bc")
+y_jrbc = ILP_Model.addVars(j, r, b, c, vtype=gb.GRB.BINARY, name="y_jrbc")
+
+#  Variables related to the charging equipment quantities
+ns_j = ILP_Model.addVars(j, vtype=gb.GRB.INTEGER, name="ns_j")
+alpha_jc = ILP_Model.addVars(j, c, vtype=gb.GRB.INTEGER, name="alpha_jc")
+nc_jc = ILP_Model.addVars(j, c, vtype=gb.GRB.INTEGER, name="nc_jc")
+np_jc = ILP_Model.addVars(j, c, vtype=gb.GRB.INTEGER, name="np_jc")
+
+# Variables related to the allocation and links of power stations with the charging locations
+beta_t = ILP_Model.addVars(t, vtype=gb.GRB.BINARY, name="beta_t")
+gamma_tj = ILP_Model.addVars(t, j, vtype=gb.GRB.BINARY, name="gamma_tj")
 
 
 
