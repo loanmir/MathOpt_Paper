@@ -69,7 +69,7 @@ xi_jrc = ILP_Model.addVars(j, r, c, vtype=gb.GRB.BINARY, name="xi_jrc")
 xi_jrcb = ILP_Model.addVars(j, r, c, b_bus_types, vtype=gb.GRB.BINARY, name="xi_jrcb")
 
 nc_jrc = ILP_Model.addVars(j, r, c, vtype=gb.GRB.INTEGER, name="nc_jrc")
-nc_jrc_b = ILP_Model.addVars(j, r, c, vtype=gb.GRB.INTEGER, name="nc_jrc_b")
+nc_jrc_b = ILP_Model.addVars(j, r, c, b_bus_types, vtype=gb.GRB.INTEGER, name="nc_jrc_b")
 nc_jrc_ct = ILP_Model.addVars(j, r, c, vtype=gb.GRB.INTEGER, name="nc_jrc_ct")
 
 # from (43) to (44)
