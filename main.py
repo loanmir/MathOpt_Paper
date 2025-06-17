@@ -1,25 +1,32 @@
 import gurobipy as gb
 import numpy as np
 
-### PROVAAAAAAAAAA GIT COMMITTT
-
 # Initializing the model
 ILP_Model = gb.Model("Electric_Bus_Model")
 
-# Parameters
-t = []
-j = []
-r = []
-b_bus_types = [1, 2, 3, 4, 5, 6] #[E433, E420, E321, E490, 321D, 420D]
-c = []
-s = []
+# PARAMETERS!!!!!!
+T = [] # power station spot set
+TO = [] # olde power station spot set
+
+N = [] # feasible charging stop set
+NO = [] # set of old charger stops
+D = [] # depot set
+
+R = [] # route set
+RO = [] # old electric us routes set
+
+B_bus_types = [1, 2, 3, 4, 5, 6] #[E433, E420, E321, E490, 321D, 420D]
+BO_bus_types = [] # old electric bus types set
+
+C = [] # charging type set
+S = []
 
 # BUS INPUTS
 cap_b = [153, 87, 85, 75, 90, 90] # passenger capacity of respective bus-types
-d_b_MAX = [15, 20, 40, 25, 15, 15] # driving range of fully charged b-type electric bus
-ct_rjbc = [6, 6, 10, 6, 40, 30] # charging time of b-type electric bus at c-type charging point of NON-DEPOT stop j of route r
-cbus_b = [500000, 350000, 400000, 400000, 300000, 330000] # b-type electric bus capital cost (initial investment for buying bus)
-vcb_rb = [270000, 180000, 200000, 170000, 180000, 200000] # variable cost of b-type electric bus on route r
+d_b_MAX = [15, 20, 40, 25, 15, 15] # driving range of fully charged b_bus_types-type electric bus
+ct_rjbc = [6, 6, 10, 6, 40, 30] # charging time of b_bus_types-type electric bus at c-type charging point of NON-DEPOT stop j of route r
+cbus_b = [500000, 350000, 400000, 400000, 300000, 330000] # b_bus_types-type electric bus capital cost (initial investment for buying bus)
+vcb_rb = [270000, 180000, 200000, 170000, 180000, 200000] # variable cost of b_bus_types-type electric bus on route r
 
 # COST INPUTS
 ccp_c = 120000 # CAPITAL COST of one c-type charging point
@@ -31,51 +38,98 @@ cl_tj = 5000 # cost of linking power station spot t and stop j -> cl_tj = 0 if t
 
 
 
+
+
+
+
 # VARIABLES!!!!!!
 
+#-------------------------------- MAIN decision variables------------------------------#
+
 # Quantity of new buses variables
-nb_rbc = ILP_Model.addVars(r, b, c, vtype=gb.GRB.INTEGER, name="nb_rbc")
-y_rbc = ILP_Model.addVars(r, b, c, vtype=gb.GRB.BINARY, name="y_rbc")
-y_r = ILP_Model.addVars(r, vtype=gb.GRB.BINARY, name="nb_rbc")
+nb_rbc = ILP_Model.addVars([r for r in range(R)], [b for b in range(B_bus_types)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="nb_rbc")
+y_rbc = ILP_Model.addVars([r for r in range(R)], [b for b in range(B_bus_types)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="y_rbc")
+y_r = ILP_Model.addVars([r for r in range(R)], vtype=gb.GRB.BINARY, name="nb_rbc")
 
 # Variables related to the assignment of electric buses for charging
-y_rbc_s = ILP_Model.addVars(r, b, c, s, vtype=gb.GRB.BINARY, name="y_rbc_s")
-y_bc = ILP_Model.addVars(b, c, vtype=gb.GRB.BINARY, name="y_bc")
-y_jrbc = ILP_Model.addVars(j, r, b, c, vtype=gb.GRB.BINARY, name="y_jrbc")
+y_rbc_s = ILP_Model.addVars([r for r in range(R)], [b for b in range(B_bus_types)], [c for c in range(C)], s, vtype=gb.GRB.BINARY, name="y_rbc_s")
+y_bc = ILP_Model.addVars([b for b in range(B_bus_types)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="y_bc")
+y_jrbc = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [b for b in range(B_bus_types)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="y_jrbc")
 
 #  Variables related to the charging equipment quantities
-ns_j = ILP_Model.addVars(j, vtype=gb.GRB.BINARY, name="ns_j")
-alpha_jc = ILP_Model.addVars(j, c, vtype=gb.GRB.BINARY, name="alpha_jc")
-nc_jc = ILP_Model.addVars(j, c, vtype=gb.GRB.INTEGER, name="nc_jc")
-np_jc = ILP_Model.addVars(j, c, vtype=gb.GRB.INTEGER, name="np_jc")
+ns_j = ILP_Model.addVars([j for j in range(N)], vtype=gb.GRB.BINARY, name="ns_j")
+alpha_jc = ILP_Model.addVars([j for j in range(N)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="alpha_jc")
+nc_jc = ILP_Model.addVars([j for j in range(N)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="nc_jc")
+np_jc = ILP_Model.addVars([j for j in range(N)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="np_jc")
 
 # Variables related to the allocation and links of power stations with the charging locations
-beta_t = ILP_Model.addVars(t, vtype=gb.GRB.BINARY, name="beta_t")
-gamma_tj = ILP_Model.addVars(t, j, vtype=gb.GRB.BINARY, name="gamma_tj")
+beta_t = ILP_Model.addVars([t for t in range(T)], vtype=gb.GRB.BINARY, name="beta_t")
+gamma_tj = ILP_Model.addVars([t for t in range(T)], [j for j in range(N)], vtype=gb.GRB.BINARY, name="gamma_tj")
 
 # Additional variables
-Z_r = ILP_Model.addVars(r, vtype=gb.GRB.INTEGER, name="Z_r")
-nv_rb = ILP_Model.addVars(r, b, vtype=gb.GRB.INTEGER, name="nv_rb")
+Z_r = ILP_Model.addVars([r for r in range(R)], vtype=gb.GRB.INTEGER, name="Z_r")
+nv_rb = ILP_Model.addVars([r for r in range(R)], [b for b in range(B_bus_types)], vtype=gb.GRB.INTEGER, name="nv_rb")
+
+#--------------------------------------------------------------------------------------#
+
+
+#-------------------------------- Constraints variables--------------------------------#
 
 # from (31) to (42)
-eta_jrc_1 = ILP_Model.addVars(j, r, c, vtype=gb.GRB.BINARY, name="eta_jrc_1")
-eta_jrc_2 = ILP_Model.addVars(j, r, c, vtype=gb.GRB.BINARY, name="eta_jrc_2")
-xi_jrc = ILP_Model.addVars(j, r, c, vtype=gb.GRB.BINARY, name="xi_jrc")
-xi_jrcb = ILP_Model.addVars(j, r, c, b, vtype=gb.GRB.BINARY, name="xi_jrcb")
+eta_jrc_1 = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="eta_jrc_1")
+eta_jrc_2 = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="eta_jrc_2")
+xi_jrc = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="xi_jrc")
+xi_jrcb = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], [b for b in range(B_bus_types)], vtype=gb.GRB.BINARY, name="xi_jrcb")
 
-nc_jrc = ILP_Model.addVars(j, r, c, vtype=gb.GRB.INTEGER, name="nc_jrc")
-nc_jrc_b = ILP_Model.addVars(j, r, c, vtype=gb.GRB.INTEGER, name="nc_jrc_b")
-nc_jrc_ct = ILP_Model.addVars(j, r, c, vtype=gb.GRB.INTEGER, name="nc_jrc_ct")
+nc_jrc = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="nc_jrc")
+nc_jrc_b = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="nc_jrc_b")
+nc_jrc_ct = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="nc_jrc_ct")
 
 # from (43) to (44)
-y_jrbc_s = ILP_Model.addVars(j, r, b, c, vtype=gb.GRB.BINARY, name="y_jrbc_s")
+y_jrbc_s = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [b for b in range(B_bus_types)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="y_jrbc_s")
 
-
+#-------------------------------------------------------------------------------------#
 
 
 
 # x = ILP_Model.addVars([i for i in range(n_items)],[j for j in range(m_boxes)], vtype=gb.GRB.BINARY, name="x")
 # y = ILP_Model.addVars([j for j in range(m_boxes)], vtype=gb.GRB.BINARY)
+
+
+
+
+#-------------------------------- Constraints --------------------------------#
+
+# (2)
+
+
+# (3)
+
+ILP_Model.addConstr(
+    gb.quicksum(vcc_j * ns_j[j] + gb.quicksum(vcp_c[c] * np_jc[j, c] for c in C) for j in N) +
+    gb.quicksum(vcb_rb[r, b] for r in R for b in B_bus_types[r]) <= uoc
+)
+                    # ???????
+
+ILP_Model.addConstr(
+    gb.quicksum(vcc[j] * ns[j] + gb.quicksum(vcp[c] * np[j, c] for c in C) for j in N) +
+    gb.quicksum(vcb[r, b] for r in R for b in B_bus_types[r])
+    <= uoc,
+    name="capacity_constraint"
+)
+
+# (4)
+
+
+
+
+
+
+
+
+
+
+
 
 
 
