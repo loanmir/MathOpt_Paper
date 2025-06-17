@@ -15,8 +15,8 @@ D = [] # depot set
 R = [] # route set
 RO = [] # old electric us routes set
 
-B_bus_types = [1, 2, 3, 4, 5, 6] #[E433, E420, E321, E490, 321D, 420D]
-BO_bus_types = [] # old electric bus types set
+B = [1, 2, 3, 4, 5, 6] #[E433, E420, E321, E490, 321D, 420D]
+BO = [] # old electric bus types set
 
 C = [] # charging type set
 S = []
@@ -104,10 +104,9 @@ y_jrbc_s = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [b fo
 
 
 # (3)
-
 ILP_Model.addConstr(
     gb.quicksum(vcc_j * ns_j[j] + gb.quicksum(vcp_c[c] * np_jc[j, c] for c in C) for j in N) +
-    gb.quicksum(vcb_rb[r, b] for r in R for b in B_bus_types[r]) <= uoc
+    gb.quicksum(vcb_rb[r, b] for r in R for b in B[r]) <= uoc
 )
                     # ???????
 
@@ -119,7 +118,72 @@ ILP_Model.addConstr(
 )
 
 # (4)
+for j in N:
+    ILP_Model.addConstr(
+        gb.quicksum(nc_jc[j, c] + nod_jc[j, c] * p_c for c in C) <= gb.quicksum(utp_t[t] * beta_t[t] for t in T[j]),
+        name="Constraint (4)"
+    )
 
+# (5)
+for t in T:
+    ILP_Model.addConstr(
+        beta_t[t] == gb.quicksum(gamma_tj[t, j] for j in N),
+        name="Constraint (5)"
+    )
+
+# (6)
+
+
+# (7)
+for b in B - BO:
+    for c in C[b]:
+        ILP_Model.addConstr(
+            y_bc[b, c] <= gb.quicksum(y_rbc[r, b, c] for r in R),
+            name="Constraint (7)"
+        )
+
+# (8)
+R_size = len(R)
+
+for b in B - BO:
+    for c in C[b]:
+        ILP_Model.addConstr(
+            R_size * y_bc[b, c] >= gb.quicksum(y_rbc[r, b, c] for r in R),
+            name="Constraint (8)"
+        )
+
+# (9)
+for b in B - BO:
+    ILP_Model.addConstr(
+        gb.quicksum(y_bc[b, c] for c in C[b]) <= 1,
+        name="Constraint (9)"
+    )
+
+# (10)
+for j in N:
+    ILP_Model.addConstr(
+        gb.quicksum(np_jc[j, c] for c in C) + gb.quicksum(nop_jc[j, c] for c in C) <= up_j[j],
+        name="Constraint (10)"
+    )
+
+# (11)
+for j in N - NO:
+    ILP_Model.addConstr(
+        alpha_jc[j, c] - np_jc[j, c] <= 0,       # take a look at this again!!!
+        name="Constraint (11)"
+    )
+
+# (12)
+
+# (13)
+
+# (14)
+
+# (15)
+
+# (16)
+
+# (17)
 
 
 
