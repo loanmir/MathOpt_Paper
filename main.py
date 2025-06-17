@@ -27,6 +27,8 @@ d_b_MAX = [15, 20, 40, 25, 15, 15] # driving range of fully charged b_bus_types-
 ct_rjbc = [6, 6, 10, 6, 40, 30] # charging time of b_bus_types-type electric bus at c-type charging point of NON-DEPOT stop j of route r
 cbus_b = [500000, 350000, 400000, 400000, 300000, 330000] # b_bus_types-type electric bus capital cost (initial investment for buying bus)
 vcb_rb = [270000, 180000, 200000, 170000, 180000, 200000] # variable cost of b_bus_types-type electric bus on route r
+B_r = [[]] # electric bus type set of route r
+C_b = [[]] # feasible charging type set for b-type electric buses
 
 # COST INPUTS
 ccp_c = 120000 # CAPITAL COST of one c-type charging point
@@ -96,7 +98,7 @@ y_jrbc_s = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [b fo
 ILP_Model.addConstr(
     gb.quicksum(csta_j[j] * ns_j[j] for j in N) +
     gb.quicksum(ccp_c * np_jc[j, c] for j in N for c in C) +
-    gb.quicksum( gb.quicksum (cbus_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in Cb) for b in Br) for r in R)
+    gb.quicksum( gb.quicksum (cbus_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b) for b in B_r) for r in R)
     <= cc
 
     
