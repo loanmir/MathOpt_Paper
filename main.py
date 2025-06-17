@@ -35,7 +35,7 @@ ccc_j = 5000 # CAPITAL COST of one charger at stop j
 vcc_j = 500 # VARIABLE COST of one charger at stop j
 ccps_t = 200000 # CAPITAL COST of a power station at t
 cl_tj = 5000 # cost of linking power station spot t and stop j -> cl_tj = 0 if t is old and j has an old charger stop
-
+uoc = 5000000 # operating, depreciation & energy cost upper limit
 
 
 # VARIABLES!!!!!!
