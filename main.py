@@ -97,10 +97,10 @@ y_jrbc_s = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [b fo
 
 ILP_Model.addConstr(
     (gb.quicksum(csta_j[j] * ns_j[j] for j in N) +
-    gb.quicksum(ccp_c * np_jc[j, c] for j in N for c in C) +
+    gb.quicksum(ccp_c[c] * np_jc[j, c] for j in N for c in C) +
     gb.quicksum(gb.quicksum (cbus_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b) for b in B_r) for r in R) +
     gb.quicksum(ccps_t[t] * beta_t[t] for t in T-TO) +
-    gb.quicksum(gb.quicksum(cl_tj * gamma_tj[t, j] for j in N-NO) for t in T-TO)
+    gb.quicksum(gb.quicksum(cl_tj[t, j] * gamma_tj[t, j] for j in N-NO) for t in T-TO)
     <= cc)
     , name="capital_cost_constraint"
 )
@@ -109,10 +109,13 @@ ILP_Model.addConstr(
 # (3)
 
 ILP_Model.addConstr(
-    gb.quicksum(vcc_j * ns_j[j] + gb.quicksum(vcp_c[c] * np_jc[j, c] for c in C) for j in N) +
-    gb.quicksum(vcb_rb[r, b] for r in R for b in B[r]) <= uoc
+    gb.quicksum(csta_j[j] * ns_j[j] for j in N) +
+    gb.quicksum(ccp_c[c] * np_jc[j, c] for j in N for c in C) +
+    gb.quicksum(gb.quicksum (cbus_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b) for b in B_r) for r in R) +
+    gb.quicksum(ccps_t[t] * beta_t[t] for t in T-TO) +
+    gb.quicksum(vcc_j[j] * ns_j[j] + gb.quicksum(vcp_c[c] * np_jc[j, c] for c in C) for j in N) +
+    gb.quicksum(gb.quicksum(vcb_rb[r, b] for b in B_r) for r in R) <= uoc
 )
-                    # ???????
 
 ILP_Model.addConstr(
     gb.quicksum(vcc[j] * ns[j] + gb.quicksum(vcp[c] * np[j, c] for c in C) for j in N) +
