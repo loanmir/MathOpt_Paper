@@ -6,7 +6,7 @@ ILP_Model = gb.Model("Electric_Bus_Model")
 
 # PARAMETERS!!!!!!
 T = [] # power station spot set
-TO = [] # olde power station spot set
+TO = [] # old power station spot set
 
 N = [] # feasible charging stop set
 NO = [] # set of old charger stops
@@ -96,12 +96,13 @@ y_jrbc_s = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [b fo
 # (2)
 
 ILP_Model.addConstr(
-    gb.quicksum(csta_j[j] * ns_j[j] for j in N) +
+    (gb.quicksum(csta_j[j] * ns_j[j] for j in N) +
     gb.quicksum(ccp_c * np_jc[j, c] for j in N for c in C) +
-    gb.quicksum( gb.quicksum (cbus_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b) for b in B_r) for r in R)
-    <= cc
-
-    
+    gb.quicksum(gb.quicksum (cbus_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b) for b in B_r) for r in R) +
+    gb.quicksum(ccps_t[t] * beta_t[t] for t in T-TO) +
+    gb.quicksum(gb.quicksum(cl_tj * gamma_tj[t, j] for j in N-NO) for t in T-TO)
+    <= cc)
+    , name="capital_cost_constraint"
 )
 
 
