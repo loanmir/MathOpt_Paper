@@ -27,8 +27,7 @@ d_b_MAX = [15, 20, 40, 25, 15, 15] # driving range of fully charged b_bus_types-
 ct_rjbc = [6, 6, 10, 6, 40, 30] # charging time of b_bus_types-type electric bus at c-type charging point of NON-DEPOT stop j of route r
 cbus_b = [500000, 350000, 400000, 400000, 300000, 330000] # b_bus_types-type electric bus capital cost (initial investment for buying bus)
 vcb_rb = [270000, 180000, 200000, 170000, 180000, 200000] # variable cost of b_bus_types-type electric bus on route r
-B_r = [[]] # electric bus type set of route r
-C_b = [[]] # feasible charging type set for b-type electric buses
+
 
 # COST INPUTS
 ccp_c = 120000 # CAPITAL COST of one c-type charging point
@@ -40,6 +39,13 @@ cl_tj = 5000 # cost of linking power station spot t and stop j -> cl_tj = 0 if t
 uoc = 5000000 # operating, depreciation & energy cost upper limit
 csta_j = [] # capital cost of a recharging station at stop j
 cc = [] # total capital cost upper limit
+B_r = [[]] # electric bus type set of route r
+C_b = [[]] # feasible charging type set for b-type electric buses
+co_b = [] # required charging type for bus type b
+nod_jc = [] # number of old c-type plugs devices at stop j
+p_c = [] # output power of one c-type plug device
+utp_t = [] # output power of a power station at spot t ∈ T
+
 
 
 # VARIABLES!!!!!!
@@ -75,6 +81,9 @@ nv_rb = ILP_Model.addVars([r for r in range(R)], [b for b in range(B)], vtype=gb
 
 #-------------------------------- Constraints variables--------------------------------#
 
+# from (1) to (10)
+y_rbco_b = ILP_Model.addVars([r for r in range(R)], [b for b in range(B)], [c for c in range[co_b]], vtype=gb.GRB.BINARY, name="y_rbco_b")
+
 # from (31) to (42)
 eta_jrc_1 = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="eta_jrc_1")
 eta_jrc_2 = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="eta_jrc_2")
@@ -109,25 +118,29 @@ ILP_Model.addConstr(
 # (3)
 
 ILP_Model.addConstr(
-    gb.quicksum(csta_j[j] * ns_j[j] for j in N) +
+    (gb.quicksum(csta_j[j] * ns_j[j] for j in N) +
     gb.quicksum(ccp_c[c] * np_jc[j, c] for j in N for c in C) +
     gb.quicksum(gb.quicksum (cbus_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b) for b in B_r) for r in R) +
     gb.quicksum(ccps_t[t] * beta_t[t] for t in T-TO) +
     gb.quicksum(vcc_j[j] * ns_j[j] + gb.quicksum(vcp_c[c] * np_jc[j, c] for c in C) for j in N) +
-    gb.quicksum(gb.quicksum(vcb_rb[r, b] for b in B_r) for r in R) <= uoc
+    gb.quicksum(gb.quicksum(vcb_rb[r, b] for b in B_r) for r in R) 
+    <= uoc)
+    , name="variable_cost_constraint"
 )
 
+'''
 ILP_Model.addConstr(
     gb.quicksum(vcc[j] * ns[j] + gb.quicksum(vcp[c] * np[j, c] for c in C) for j in N) +
     gb.quicksum(vcb[r, b] for r in R for b in B[r])
     <= uoc,
     name="capacity_constraint"
 )
+'''
 
 # (4)
 for j in N:
     ILP_Model.addConstr(
-        gb.quicksum(nc_jc[j, c] + nod_jc[j, c] * p_c for c in C) <= gb.quicksum(utp_t[t] * beta_t[t] for t in T[j]),
+        gb.quicksum((nc_jc[j, c] + nod_jc[j, c]) * p_c[c] for c in C) <= gb.quicksum(utp_t[t] * beta_t[t] for t in T[j]),
         name="Constraint (4)"
     )
 
@@ -139,7 +152,12 @@ for t in T:
     )
 
 # (6)
-
+for r in R:
+    for b in BO & B_r[r]:
+        ILP_Model.addConstr(
+            gb.quicksum(y_rbc[r, b, c] - y_rbco_b[r, b, co_b[b]] for c in C_b) <= 0,
+            name="Constraint (6)"
+        )
 
 # (7)
 for b in B - BO:
