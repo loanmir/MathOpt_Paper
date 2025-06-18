@@ -225,7 +225,7 @@ for r in R:
     for b in B_r[r]:
         for c in C_b[b]:
             ILP_Model.addConstr(
-                y_rbc[r, b, c] - sum(y_rbc_s[r, b, c] for s in range(1, n_rbc)) <= 0,
+                y_rbc[r, b, c] - sum(y_rbc_s[r, b, c] for s in range(1, n_rbc[r, b, c])) <= 0,
                 name="Constraint (14)"
             )
 
