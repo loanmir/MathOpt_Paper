@@ -40,12 +40,17 @@ uoc = 5000000 # operating, depreciation & energy cost upper limit
 csta_j = [] # capital cost of a recharging station at stop j
 cc = [] # total capital cost upper limit
 B_r = [[]] # electric bus type set of route r
+V_r = [[]] # route r set of non-battery vehicle types
 C_b = [[]] # feasible charging type set for b-type electric buses
 co_b = [] # required charging type for bus type b
 nod_jc = [] # number of old c-type plugs devices at stop j
 p_c = [] # output power of one c-type plug device
 utp_t = [] # output power of a power station at spot t ∈ T
 T_j = [[]] # set power station spots feasible for stop j
+dem_r = [] # passenger demand of route r = past passenger capacity of all route r vehicles
+dem_0_r = [] # passenger capacity of route r to be satisfied by new electric buses and remaining non-battery vehicles
+for r in R:
+    dem_0_r[r] = dem_r[r] - gb.quicksum(nob_rb[r, b] * cap_b[b] for b in B_r[r])
 
 
 
@@ -200,16 +205,68 @@ for j in D - NO:
     )
 
 # (12)
+for r in R:
+    ILP_Model.addConstr(
+        gb.quicksum(cap_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b[b]) for b in B_r[r]) +
+        gb.quicksum(cap_b[b] * nv_rb[r, b] for b in V_r[r]) >= dem_0_r * y_r[r],
+        name="COnstraint (12)"
+    )
 
 # (13)
+for r in R:
+    for b in V_r[r]:
+        ILP_Model.addConstr(
+            nv_rb[r, b] <= nv_0_rb[r, b],
+            name="Constraint (13)"
+        )
 
 # (14)
+for r in R:
+    for b in B_r[r]:
+        for c in C_b[b]:
+            ILP_Model.addConstr(
+                y_rbc[r, b, c] - sum(y_rbc_s[r, b, c] for s in range(1, n_rbc)) <= 0,
+                name="Constraint (14)"
+            )
 
 # (15)
+for r in R:
+    ILP_Model.addConstr(
+        Z_r[r] <= gb.quicksum(cap_b[b] for b in B_r[r]) * gb.quicksum(nb_rbc[r, b, c] for c in C_b[b]),  # NOT SURE!!
+        name="Constraint (15)"
+    )
 
 # (16)
+for r in R:
+    ILP_Model.addConstr(
+        Z_r[r] <= dem_0_r[r] * y_r[r],
+        name="Constraint (16)"
+    )
 
 # (17)
+for r in R:
+    for b in B_r[r]:
+        for c in C_b[b]:
+            ILP_Model.addConstr(
+                nb_rbc[r, b, c] >= y_rbc[r, b, c],
+                name="COnstraint (17)"
+            )
+
+# (18)
+
+# (19)
+
+# (20)
+
+# (21)
+
+# (22)
+
+# (23)
+
+# (24)
+
+# (25)
 
 
 
