@@ -41,6 +41,7 @@ csta_j = [] # capital cost of a recharging station at stop j
 cc = [] # total capital cost upper limit
 B_r = [[]] # electric bus type set of route r
 V_r = [[]] # route r set of non-battery vehicle types
+L_r = [[]] # cycle time of any vehicle on route r - time between 2 consecutive departures of the same vehicle on route r
 C_b = [[]] # feasible charging type set for b-type electric buses
 co_b = [] # required charging type for bus type b
 nod_jc = [] # number of old c-type plugs devices at stop j
@@ -49,8 +50,12 @@ utp_t = [] # output power of a power station at spot t ∈ T
 T_j = [[]] # set power station spots feasible for stop j
 dem_r = [] # passenger demand of route r = past passenger capacity of all route r vehicles
 dem_0_r = [] # passenger capacity of route r to be satisfied by new electric buses and remaining non-battery vehicles
+ub_rb = [] # upper bound on the number of new b-type electric buses
 for r in R:
     dem_0_r[r] = dem_r[r] - gb.quicksum(nob_rb[r, b] * cap_b[b] for b in B_r[r])
+
+ub_rb = ..... # we need to calculate it!
+
 
 
 
@@ -61,7 +66,8 @@ for r in R:
 # Quantity of new buses variables
 nb_rbc = ILP_Model.addVars([r for r in range(R)], [b for b in range(B)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="nb_rbc")
 y_rbc = ILP_Model.addVars([r for r in range(R)], [b for b in range(B)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="y_rbc")
-y_r = ILP_Model.addVars([r for r in range(R)], vtype=gb.GRB.BINARY, name="nb_rbc")
+y_r = ILP_Model.addVars([r for r in range(R)], vtype=gb.GRB.BINARY, name="y_r")
+y_rb = ILP_Model.addVars([r for r in range(R)], [b for b in range(B)] , vtype=gb.GRB.BINARY, name="y_rb")
 
 # Variables related to the assignment of electric buses for charging
 y_rbc_s = ILP_Model.addVars([r for r in range(R)], [b for b in range(B)], [c for c in range(C)], s, vtype=gb.GRB.BINARY, name="y_rbc_s")
@@ -72,6 +78,7 @@ y_jrbc = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [b for 
 ns_j = ILP_Model.addVars([j for j in range(N)], vtype=gb.GRB.BINARY, name="ns_j")
 alpha_jc = ILP_Model.addVars([j for j in range(N)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="alpha_jc")
 nc_jc = ILP_Model.addVars([j for j in range(N)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="nc_jc")
+# for nc_jc value look at page 14!!!
 np_jc = ILP_Model.addVars([j for j in range(N)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="np_jc")
 
 # Variables related to the allocation and links of power stations with the charging locations
@@ -232,7 +239,7 @@ for r in R:
 # (15)
 for r in R:
     ILP_Model.addConstr(
-        Z_r[r] <= gb.quicksum(cap_b[b] for b in B_r[r]) * gb.quicksum(nb_rbc[r, b, c] for c in C_b[b]),  # NOT SURE!!
+        Z_r[r] <= gb.quicksum(cap_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b[b]) for b in B_r[r]),
         name="Constraint (15)"
     )
 
@@ -249,24 +256,185 @@ for r in R:
         for c in C_b[b]:
             ILP_Model.addConstr(
                 nb_rbc[r, b, c] >= y_rbc[r, b, c],
-                name="COnstraint (17)"
+                name="Constraint (17)"
             )
 
 # (18)
+for r in R:
+    for b in B_r[r]:
+        for c in C_b[b]:
+            ILP_Model.addConstr(
+                nb_rbc[r, b, c] <= ub_rb * y_rbc[r, b, c],
+                name="Constraint (18)"
+            )
 
 # (19)
+for r in R:
+    for b in B_r[r]:
+        ILP_Model.addConstr(
+            y_rb == gb.quicksum(y_rbc[r, b, c] for c in C_b[b]),
+            name="Constraint (19)"
+        )
 
 # (20)
+for j in N - NO:
+    ILP_Model.addConstr(
+        ns_j[j] <= gb.quicksum(np_jc[j, c] + nop_jc[j, c] for c in C),
+        name="Constraint (20)"
+    )
 
 # (21)
+for j in N - NO:
+    ILP_Model.addConstr(
+        up_j[j] * ns_j[j] >= gb.quicksum(np_jc[j, c] + nop_jc[j, c] for c in C),
+        name="Constraint (21)"
+    )
 
 # (22)
+for j in N - D:
+    for c in C:
+        ILP_Model.addConstr(
+            np_jc[j, c] >= ((nc_jc[j, c] + nod_jc[j, c])/uc_c[c]) - nop_jc[j, c],
+            name="Constraint (22)"
+        )
 
 # (23)
+for j in N - D:
+    ILP_Model.addConstr(
+        gb.quicksum(np_jc[j, c] for c in C) + gb.quicksum(nop_jc[j, c] for c in C) <= up_j[j],
+        name="Constraint (23)"
+    )
 
 # (24)
+for r in R:
+    ILP_Model.addConstr(
+        y_r[r] <= gb.quicksum(gb.quicksum(y_rbc[r, b, c] for c in C_b[b]) for b in B_r[r]),
+        name="Constraint (24)"
+    )
 
 # (25)
+B_r_size = []
+
+for r in R:
+    B_r_size[r] = len(B_r[r])   # Look at this -> NOT SURE!!! should store size of B_r for each different r ?????????!!!
+    ILP_Model.addConstr(
+        B_r_size * y_r[r] >= gb.quicksum(gb.quicksum(y_rbc[r, b, c] for c in C_b[b]) for b in B_r[r]),
+        name="Constraint (25)"
+    )
+
+# (26)
+for j in D - NO:
+    for c in C:
+        ILP_Model.addConstr(
+            alpha_jc[j, c] <= gb.quicksum(y_r[r] for r in R_jc[j, c]),
+            name="Constraint (26)"
+        )
+
+# (27)
+R_jc_size = len(R_jc) # NOT CORRECT -> double loop needed!! -> Create the data structure for R_jc!!!
+
+for j in D - NO:
+    for c in C:
+        ILP_Model.addConstr(
+            R_jc_size * alpha_jc[j, c] >= gb.quicksum(y_r[r] for r in R_jc[j, c]),
+            name="Constraint (27)"
+        )
+
+# (28)
+for r in R:
+    ILP_Model.addConstr(
+        L_r[r] * y_r[r] <= ut_r[r] * gb.quicksum(gb.quicksum(nb_rbc[r, b, c] + nob_rb[r, b] for c in C_b[b]) for b in B_r[r]) +
+        ut_r[r] * gb.quicksum(nv_rb[r, b] for b in V_r[r]),
+        name="Constraint (28)"
+    )
+
+# (29)
+for r in R:
+    ILP_Model.addConstr(
+        L_r[r] * y_r[r] >= lt_r[r] * gb.quicksum(gb.quicksum(nb_rbc[r, b, c] + nob_rb[r, b] for c in C_b[b]) for b in B_r[r]) +
+        lt_r[r] * gb.quicksum(nv_rb[r, b] for b in V_r[r]),
+        name="Constraint (29)"
+    )
+
+# (30)
+for j in D - NO:
+    ILP_Model.addConstr(
+        uc_c[c]    # I DON'T KNOW -> UNDERSTAND WHY THERE IS NO LOOP with index c!!!!!
+    )
+
+# (31)
+for j in N - D:
+    for c in C:
+        ILP_Model.addConstr(
+            nc_jc[j, c] == gb.quicksum(nc_jrc[j, r, c] - nod_jc[j, c] for r in R_jc[j, c]),
+            name="Constraint (31)"
+        )
+
+# (32)
+for j in N - D:
+    for r in R_jc:
+        for c in C:
+            ILP_Model.addConstr(
+                nc_jrc_b[j, r, c] == gb.quicksum(nb_rbc[r, b, c] + nob_rbc[r, b, c] for b in B_rc[r, c]),
+                name="Constraint (32)"
+            )
+
+# (33)
+for j in N - D:
+    for r in R_jc:
+        for c in C:
+            ILP_Model.addConstr(
+                nc_jrc[j, r, c] <= nc_jrc_ct[j, r, c],
+                name="Constraint (33)"
+            )
+
+# (34)
+for j in N - D:
+    for r in R_jc:
+        for c in C:
+            ILP_Model.addConstr(
+                nc_jrc[j, r, c] <= nc_jrc_b[j, r, c],
+                name="Constraint (34)"
+            )
+
+# (35)
+for j in N - D:
+    for r in R_jc:
+        for c in C:
+            ILP_Model.addConstr(
+                nc_jrc[j, r, c] >= nc_jrc_ct[j, r, c] - up_j[j] * uc_c[c] * (1 - eta_jrc_1[j, r, c]),
+                name="Constraint (35)"
+            )
+
+# (36)
+for j in N - D:
+    for r in R_jc:
+        for c in C:
+            ILP_Model.addConstr(
+                nc_jrc[j, r, c] >= nc_jrc_b[j, r, c] - up_j[j] * uc_c[c] * (1 - eta_jrc_2[j, r, c]),
+                name="Constraint (36)"
+            )
+
+# (37)
+for j in N - D:
+    for r in R_jc:
+        for c in C:
+            ILP_Model.addConstr(
+                eta_jrc_1[j, r, c] + eta_jrc_2[j, r, c] == 1,
+                name="Constraint (37)"
+            )
+
+# (38)
+for j in N - D:
+    for r in R_jc:
+        for c in C:
+            for b in B_rc[r, c]:
+                ILP_Model.addConstr(
+                    nc_jrc_ct[j, r, c] >= (ct_rjbc[r, j, b, c] * y_jrbc[j, r, b, c])/lt_r[r],
+                    name="Constraint (38)"
+                )
+
+# (39)
 
 
 
