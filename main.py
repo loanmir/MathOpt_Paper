@@ -272,7 +272,7 @@ for r in R:
 for r in R:
     for b in B_r[r]:
         ILP_Model.addConstr(
-            y_rb == gb.quicksum(y_rbc[r, b, c] for c in C_b[b]),
+            y_rb[r,b] == gb.quicksum(y_rbc[r, b, c] for c in C_b[b]),
             name="Constraint (19)"
         )
 
@@ -435,6 +435,60 @@ for j in N - D:
                 )
 
 # (39)
+
+# (40)
+
+# (41)
+
+# (42)
+
+# (43)
+
+# (44)
+
+# (45)
+
+# (46)
+
+# (47)
+
+# (48)
+
+# (49)
+
+# (50)
+
+# (51)
+
+# (52)
+
+# (53)
+
+# (54)
+
+# (55)
+
+# (56)
+
+# (57)
+
+# (58)
+
+# (59)
+
+# (60)
+
+# (61)
+
+# (62)
+
+# (63)
+
+# (64)
+
+# (65)
+
+# (66)
 
 
 
