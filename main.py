@@ -373,7 +373,7 @@ for j in N - D:
 # (32)
 for j in N - D:
         for c in C:
-            for r in [j,c]:
+            for r in R_jc[j,c]:
                 ILP_Model.addConstr(
                 nc_jrc_b[j, r, c] == gb.quicksum(nb_rbc[r, b, c] + nob_rbc[r, b, c] for b in B_rc[r, c]),
                 name="Constraint (32)"
@@ -382,7 +382,7 @@ for j in N - D:
 # (33)
 for j in N - D:
         for c in C:
-            for r in [j,c]:
+            for r in R_jc[j,c]:
                 ILP_Model.addConstr(
                 nc_jrc[j, r, c] <= nc_jrc_ct[j, r, c],
                 name="Constraint (33)"
@@ -391,7 +391,7 @@ for j in N - D:
 # (34)
 for j in N - D:
         for c in C:
-            for r in [j,c]:
+            for r in R_jc[j,c]:
                 ILP_Model.addConstr(
                 nc_jrc[j, r, c] <= nc_jrc_b[j, r, c],
                 name="Constraint (34)"
@@ -400,7 +400,7 @@ for j in N - D:
 # (35)
 for j in N - D:
         for c in C:
-            for r in [j,c]:
+            for r in R_jc[j,c]:
                 ILP_Model.addConstr(
                 nc_jrc[j, r, c] >= nc_jrc_ct[j, r, c] - up_j[j] * uc_c[c] * (1 - eta_jrc_1[j, r, c]),
                 name="Constraint (35)"
@@ -409,7 +409,7 @@ for j in N - D:
 # (36)
 for j in N - D:
         for c in C:
-            for r in [j,c]:
+            for r in R_jc[j,c]:
                 ILP_Model.addConstr(
                 nc_jrc[j, r, c] >= nc_jrc_b[j, r, c] - up_j[j] * uc_c[c] * (1 - eta_jrc_2[j, r, c]),
                 name="Constraint (36)"
@@ -418,7 +418,7 @@ for j in N - D:
 # (37)
 for j in N - D:
         for c in C:
-            for r in [j,c]:
+            for r in R_jc[j,c]:
                 ILP_Model.addConstr(
                 eta_jrc_1[j, r, c] + eta_jrc_2[j, r, c] == 1,
                 name="Constraint (37)"
@@ -427,7 +427,7 @@ for j in N - D:
 # (38)
 for j in N - D:
         for c in C:
-            for r in [j,c]:
+            for r in R_jc[j,c]:
                 for b in B_rc[r, c]:
                     ILP_Model.addConstr(
                     nc_jrc_ct[j, r, c] >= (ct_rjbc[r, j, b, c] * y_jrbc[j, r, b, c])/lt_r[r],
