@@ -45,6 +45,7 @@ co_b = [] # required charging type for bus type b
 nod_jc = [] # number of old c-type plugs devices at stop j
 p_c = [] # output power of one c-type plug device
 utp_t = [] # output power of a power station at spot t ∈ T
+T_j = [[]] # set power station spots feasible for stop j
 
 
 
@@ -107,7 +108,7 @@ y_jrbc_s = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [b fo
 ILP_Model.addConstr(
     (gb.quicksum(csta_j[j] * ns_j[j] for j in N) +
     gb.quicksum(ccp_c[c] * np_jc[j, c] for j in N for c in C) +
-    gb.quicksum(gb.quicksum (cbus_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b) for b in B_r) for r in R) +
+    gb.quicksum(gb.quicksum (cbus_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b[b]) for b in B_r[r]) for r in R) +
     gb.quicksum(ccps_t[t] * beta_t[t] for t in T-TO) +
     gb.quicksum(gb.quicksum(cl_tj[t, j] * gamma_tj[t, j] for j in N-NO) for t in T-TO)
     <= cc)
@@ -120,7 +121,7 @@ ILP_Model.addConstr(
 ILP_Model.addConstr(
     (gb.quicksum(csta_j[j] * ns_j[j] for j in N) +
     gb.quicksum(ccp_c[c] * np_jc[j, c] for j in N for c in C) +
-    gb.quicksum(gb.quicksum (cbus_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b) for b in B_r) for r in R) +
+    gb.quicksum(gb.quicksum (cbus_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b[b]) for b in B_r[r]) for r in R) +
     gb.quicksum(ccps_t[t] * beta_t[t] for t in T-TO) +
     gb.quicksum(vcc_j[j] * ns_j[j] + gb.quicksum(vcp_c[c] * np_jc[j, c] for c in C) for j in N) +
     gb.quicksum(gb.quicksum(vcb_rb[r, b] for b in B_r) for r in R) 
@@ -140,7 +141,7 @@ ILP_Model.addConstr(
 # (4)
 for j in N:
     ILP_Model.addConstr(
-        gb.quicksum((nc_jc[j, c] + nod_jc[j, c]) * p_c[c] for c in C) <= gb.quicksum(utp_t[t] * beta_t[t] for t in T[j]),
+        gb.quicksum((nc_jc[j, c] + nod_jc[j, c]) * p_c[c] for c in C) <= gb.quicksum(utp_t[t] * beta_t[t] for t in T_j[j]),
         name="Constraint (4)"
     )
 
@@ -155,13 +156,13 @@ for t in T:
 for r in R:
     for b in BO & B_r[r]:
         ILP_Model.addConstr(
-            gb.quicksum(y_rbc[r, b, c] - y_rbco_b[r, b, co_b[b]] for c in C_b) <= 0,
+            gb.quicksum(y_rbc[r, b, c] - y_rbco_b[r, b, co_b[b]] for c in C_b[b]) <= 0,
             name="Constraint (6)"
         )
 
 # (7)
 for b in B - BO:
-    for c in C[b]:
+    for c in C_b[b]:
         ILP_Model.addConstr(
             y_bc[b, c] <= gb.quicksum(y_rbc[r, b, c] for r in R),
             name="Constraint (7)"
@@ -171,7 +172,7 @@ for b in B - BO:
 R_size = len(R)
 
 for b in B - BO:
-    for c in C[b]:
+    for c in C_b[b]:
         ILP_Model.addConstr(
             R_size * y_bc[b, c] >= gb.quicksum(y_rbc[r, b, c] for r in R),
             name="Constraint (8)"
@@ -180,7 +181,7 @@ for b in B - BO:
 # (9)
 for b in B - BO:
     ILP_Model.addConstr(
-        gb.quicksum(y_bc[b, c] for c in C[b]) <= 1,
+        gb.quicksum(y_bc[b, c] for c in C_b[b]) <= 1,
         name="Constraint (9)"
     )
 
@@ -192,7 +193,7 @@ for j in N:
     )
 
 # (11)
-for j in N - NO:
+for j in D - NO:
     ILP_Model.addConstr(
         alpha_jc[j, c] - np_jc[j, c] <= 0,       # take a look at this again!!!
         name="Constraint (11)"
