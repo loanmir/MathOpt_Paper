@@ -443,18 +443,66 @@ for j in N - D:
                     name=f"Constraint_39_{j}_{r}_{c}_{b}"
 
 # (40)
+for j in N - D:
+        for c in C:
+            for r in R_jc[j, c]:
+                for b in B_rc[r, c]:
+                    ILP_Model.addConstr(
+                        nc_jrc_ct[j, r, c] >= noc_jrc_ct[j, r, c],
+                        name=f"Constraint_40_{j}_{r}_{c}_{b}"
+                    )
 
 # (41)
+for j in N - D:
+        for c in C:
+            for r in R_jc[j, c]:
+                for b in B_rc[r, c]:
+                    ILP_Model.addConstr(
+                        nc_jrc_ct[j, r, c] <= noc_jrc_ct[j, r, c] + nc_jrc_max[j, r, c] * (1 - xi_jrc[j, r, c]),
+                        name=f"Constraint_41_{j}_{r}_{c}_{b}"
+                    )
 
 # (42)
+for j in N - D:
+        for c in C:
+            for r in R_jc[j, c]:
+                ILP_Model.addConstr(
+                    xi_jrc[j, r, c] + gb.quicksum(xi_jrcb for b in B_rc[r, c]) == 1,
+                    name=f"Constraint_42_{j}_{c}_{r}"
+                )
 
 # (43)
+for r in R:
+        for j in pi_r[r]:
+            for b in B_r[r]:
+                for c in C_b[b]:
+                    ILP_Model.addConstr(
+                        y_jrbc[j, r, b, c] == sum(y_jrbc_s[j, r, b, c] for s in range(1, n_rbc[r, b, c])),
+                        name=f"Constraint_43_{r}_{j}_{b}_{c}"
+                    )
 
 # (44)
+for r in R:
+        for b in B_r[r]:                                            # Look at this constraint -> Not sure!!!
+            for c in C_b[b]:
+                for s in range(1, n_rbc[r, b, c]):
+                    predecessors = S_rbc_s[(r, b, c, s)]
+                    ILP_Model.addConstr(
+                        gb.quicksum(y_jrbc_s[j, r, b, c] for j in predecessors) -
+                        l_rbc_s[r, b, c] * y_rbc_s[r, b, c] == 0,
+                        name=f"Constraint_44_{r}_{b}_{c}_{s}"
+                    )
 
 # (45)
+for t in TO:
+    ILP_Model.addConstr(
+        beta_t[t] == 1,
+        name=f"Constraint_45_{t}"
+    )
 
 # (46)
+# T_minus_TO = [t for t in T if t not in TO]
+
 
 # (47)
 
