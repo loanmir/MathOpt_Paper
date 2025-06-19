@@ -1,4 +1,5 @@
 from math import gamma
+from cycler import V
 import gurobipy as gb
 import numpy as np
 
@@ -516,32 +517,94 @@ for t in TO:
 # (46)
 # T_minus_TO = [t for t in T if t not in TO]
 
-
 # (47)
+for j in NO:
+    for t in TO_j[j]:
+        ILP_Model.addConstr(
+            gamma_tj[t, j] == 1,
+            name=f"Constraint_47_{t}"
+        )
 
 # (48)
+# same problem as constraint 46
 
 # (49)
+for r in R:
+    ILP_Model.addConstr(
+        Z_r[r] >= 0,
+        name=f"Constraint_49_a_{r}"
+    )
+    ILP_Model.addConstr(
+        Z_r[r] <= dem_r[r],
+        name=f"Constraint_49_b_{r}"
+    )
 
 # (50)
+for r in R:
+    for b in B_r[r]:
+        for c in C_b[b]:
+            ILP_Model.addConstr(
+                nb_rbc[r, b, c] >= 0,
+                name=f"Constraint_50_a_{r}_{b}_{c}"
+            )
+            ILP_Model.addConstr(
+                nb_rbc[r, b, c] <= ub_rb[r, b],
+                name=f"Constraint_50_b_{r}_{b}_{c}"
+            )
 
 # (51)
+for r in R:
+    for b in V_r[r]:
+        ILP_Model.addConstr(
+            nv_rb[r, b] >= 0,
+            name=f"Constraint_51_a_{r}_{b}"
+        )
+        ILP_Model.addConstr(
+            nv_rb[r, b] <= nv_0_rb[r, b],
+            name=f"Constraint_51_b_{r}_{b}"
+        )
 
 # (52)
+# same problem as constraint 46
 
 # (53)
+for j in N - D:
+    for c in C:
+        ILP_Model.addConstr(
+            nc_jc[j, c] >= 0,
+            name=f"Constraint_53_a_{j}_{c}"
+        )
+        ILP_Model.addConstr(
+            nc_jc[j, c] <= (up_j[j] * uc_c[c] - nod_jc[j, c]),
+            name=f"Constraint_53_b_{j}_{c}"
+        )
 
 # (54)
+for j in N - D:
+    for c in C:
+        ILP_Model.addConstr(
+            np_jc[j, c] >= 0,
+            name=f"Constraint_54_a_{j}_{c}"
+        )
+        ILP_Model.addConstr(
+            np_jc[j, c] <= (up_j[j] - nop_jc[j, c]),
+            name=f"Constraint_54_b_{j}_{c}"
+        )
 
 # (55)
+# What is the difference with constraint 53?
 
 # (56)
+# same problem as constraint 46
 
 # (57)
+# same problem as constraint 46
 
 # (58)
+# same problem as constraint 46
 
 # (59)
+# same problem as constraint 46
 
 # (60)
 alpha_jc = {}
@@ -588,11 +651,13 @@ for r in R:
         )
 
 # (64)
+# same problem as constraint 46
 
 # (65)
+# j not it S_rbc_s -----> ???
 
 # (66)
-
+# same problem as constraint 46
 
 
 
