@@ -435,6 +435,12 @@ for j in N - D:
                 )
 
 # (39)
+for j in N - D:
+        for c in C:
+            for r in R_jc[j,c]:
+                for b in B_rc[r, c]:
+                    nc_jrc_ct[j, r, c] <= ((ct_rjbc[r, j, b, c] * y_jrbc[j, r, b, c]) / lt_r[r])  + nc_jcr_max[j, c, r] (1 - xi_jrbc[j, r, b, c]),
+                    name="Constraint (39)"
 
 # (40)
 
@@ -477,12 +483,48 @@ for j in N - D:
 # (59)
 
 # (60)
+alpha_jc = {}
+for j in D - NO:
+    alpha_jc[j] = ILP_Model.addVar(vtype=gb.GRB.BINARY, name=f"alpha_{j}_c")
 
 # (61)
+for r in R:
+    for j in pi_r[r]:
+        for c in C: 
+            ILP_Model.addConstr(
+            nc_jrc_ct[j, r, c] >= 0,
+            name=f"Constraint_61_a_{j}_{r}_{c}"
+        )
+            ILP_Model.addConstr(
+            nc_jrc_ct[j, r, c] <= nc_jrc_max[j, r, c],
+            name=f"Constraint_61_b_{j}_{r}_{c}"
+        )
 
 # (62)
+for r in R:
+    for j in pi_r[r]:
+        for c in C:
+            ILP_Model.addConstr(
+            nc_jrc_b[j, r, c] >= 0,
+            name=f"Constraint_62_a_{j}_{r}_{c}"
+        )
+            ILP_Model.addConstr(
+            nc_jrc_b[j, r, c] <= gb.quicksum(ub_rb[r, b] + nob_rb[r, b] for b in B_r[r]),
+            name=f"Constraint_62_b_{j}_{r}_{c}"
+        )
 
 # (63)
+for r in R:
+    for j in pi_r[r]:
+        for c in C:
+            ILP_Model.addConstr(
+            nc_jrc[j, r, c] >= 0,
+            name=f"Constraint_63_a_{j}_{r}_{c}"
+        )
+            ILP_Model.addConstr(
+            nc_jrc[j, r, c] <= min(up_j[j] * uc_c[c], nc_jrc_max[j, r, c]),
+            name=f"Constraint_63_b_{j}_{r}_{c}"
+        )
 
 # (64)
 
