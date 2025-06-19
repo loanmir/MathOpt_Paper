@@ -1,3 +1,4 @@
+from math import gamma
 import gurobipy as gb
 import numpy as np
 
@@ -112,6 +113,18 @@ y_jrbc_s = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [b fo
 
 #-------------------------------------------------------------------------------------#
 
+#-------------------------------- Objective function -----------------------------------#
+
+ILP_Model.setObjective(
+    (gb.quicksum(Z_r[r] - gb.quicksum(nv_rb[r, b] * cap_b[b] for b in V_r[r]) / dem_r[r] for r in R)) -
+    (gb.quicksum(gb.quicksum(nc_jc[j, c] for c in C) for j in N) / (len(N) * gb.quicksum(uc_c[c] for c in C))) -
+    (gb.quicksum(gb.quicksum(np_jc[j, c] for c in C) for j in N) / (gb.quicksum(up_j[j] for j in N))) -
+    (gb.quicksum(beta_t[t] for t in T - TO) / (len(T))) - 
+    (gb.quicksum(gb.quicksum(gamma_tj[t, j] for t in T_j[j]) for j in N - NO) / (len(T) * len(N))),
+    sense=gb.GRB.MAXIMIZE
+)
+
+#---------------------------------------------------------------------------------------#
 
 #-------------------------------- Constraints --------------------------------#
 
