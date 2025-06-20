@@ -1,3 +1,4 @@
+import math
 from math import gamma
 from cycler import V
 import gurobipy as gb
@@ -56,7 +57,12 @@ ub_rb = [] # upper bound on the number of new b-type electric buses
 for r in R:
     dem_0_r[r] = dem_r[r] - gb.quicksum(nob_rb[r, b] * cap_b[b] for b in B_r[r])
 
-ub_rb = ..... # we need to calculate it!
+# we need to calculate it! -> ASK also this to the professor!!!!
+for r in R:
+    for b in B_r[r]: # assuming B_r[r] gives buses relevant to route r
+        numerator = dem_0_r[r]
+        denominator = cap_b[b]
+        ub_rb[r, b] = math.ceil(numerator/denominator)
 
 
 
@@ -212,6 +218,7 @@ for b in B - BO:
     )
 
 # (10)
+# nop_jc and up_j are both input variables -> Waiting for the data!
 for j in N:
     ILP_Model.addConstr(
         gb.quicksum(np_jc[j, c] for c in C) + gb.quicksum(nop_jc[j, c] for c in C) <= up_j[j],
@@ -230,7 +237,7 @@ for r in R:
     ILP_Model.addConstr(
         gb.quicksum(cap_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b[b]) for b in B_r[r]) +
         gb.quicksum(cap_b[b] * nv_rb[r, b] for b in V_r[r]) >= dem_0_r * y_r[r],
-        name=f"COnstraint_12_{r}"
+        name=f"Constraint_12_{r}"
     )
 
 # (13)
@@ -246,7 +253,8 @@ for r in R:
     for b in B_r[r]:
         for c in C_b[b]:
             ILP_Model.addConstr(
-                y_rbc[r, b, c] - sum(y_rbc_s[r, b, c] for s in range(1, n_rbc[r, b, c])) <= 0,
+                y_rbc[r, b, c] - sum(y_rbc_s[r, b, c] for s in range(1, n_rbc[r, b, c])) <= 0,  ### Is n_rbc an array ? in this case a 3D matrix?
+                                                                                                ## it represents the number of all possible scenarios s! TAKE A LOOK
                 name=f"Constraint_14_{r}_{b}_{c}"
             )
 
@@ -296,7 +304,7 @@ for j in N - NO:
         ns_j[j] <= gb.quicksum(np_jc[j, c] + nop_jc[j, c] for c in C),
         name=f"Constraint_20_{j}"
     )
-
+                                    ### as before -> nop_jc and up_j are input variables -> Waiting for data
 # (21)
 for j in N - NO:
     ILP_Model.addConstr(
@@ -315,7 +323,7 @@ for j in N - D:
 # (23)
 for j in N - D:
     ILP_Model.addConstr(
-        gb.quicksum(np_jc[j, c] for c in C) + gb.quicksum(nop_jc[j, c] for c in C) <= up_j[j],
+        gb.quicksum(np_jc[j, c] for c in C) + gb.quicksum(nop_jc[j, c] for c in C) <= up_j[j],  ### nop_jc and up_j input variables
         name=f"Constraint_23_{j}"
     )
 
@@ -376,6 +384,8 @@ for j in D - NO:
         uc_c[c]    # I DON'T KNOW -> UNDERSTAND WHY THERE IS NO LOOP with index c!!!!!
     )
 
+    ### uc_c is an input variable!
+
 # (31)
 for j in N - D:
     for c in C:
@@ -384,7 +394,7 @@ for j in N - D:
             name=f"Constraint_31_{j}_{c}"
         )
 
-# (32)
+# (32)                              #### from here on -> ASK profesor for tips on how to implement the additional sets -> B_rc an R_jc and so on!
 for j in N - D:
         for c in C:
             for r in R_jc[j,c]:
@@ -420,7 +430,7 @@ for j in N - D:
                 name=f"Constraint_35_{j}_{r}_{c}"
             )
 
-# (36)
+# (36)                                                                  ### up_j and uc_c are input variables!!
 for j in N - D:
         for c in C:
             for r in R_jc[j,c]:
@@ -590,6 +600,8 @@ for j in N - D:
             np_jc[j, c] <= (up_j[j] - nop_jc[j, c]),
             name=f"Constraint_54_b_{j}_{c}"
         )
+
+# Ask professor for this constraints!!!!!! how to implement them!!
 
 # (55)
 # What is the difference with constraint 53?
