@@ -23,6 +23,7 @@ PROBLEMS:
 1) differnces between nc_jrc and nd_jrc_ct (page 14 over constraint 31)
 2) Missing data for some dicts, we invent them? How? Or  do we wait for the dataset from the researchers?
 3) Is it ok to create different files for the different rando problems we have to implement? 
-4) Constraint 30, why no loop for c values?
+4) Constraint 30, how to implement? why no loop for c values?
 5) We have the values for the Base case with c=1. What to do for the values for the modified base case 1? (multiple c values -> we do not have the values od the inputs that depend on multiple c)
-6) 
+6) Implementing with dicts or with sets (like cap_b)?
+7) 
