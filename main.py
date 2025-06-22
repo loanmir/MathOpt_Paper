@@ -1,6 +1,4 @@
 import math
-from math import gamma
-from cycler import V
 import gurobipy as gb
 import numpy as np
 
@@ -8,24 +6,31 @@ import numpy as np
 ILP_Model = gb.Model("Electric_Bus_Model")
 
 # PARAMETERS!!!!!!
-T = [] # power station spot set
-TO = [] # old power station spot set
-
-N = [] # feasible charging stop set
-NO = [] # set of old charger stops
-D = [] # depot set
-
 R = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26] # route set
+D = {
+    1: (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14),
+    2: (15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26)
+} # depot set
+
+T = [] # power station spot set
+indices = [1,2] + list(range(5,20))
+TO = [f"D{d}" for d in D.keys()] + indices # old power station spot set
+
+N = list(range(1,24)) # feasible charging stop set
+NO = [] # set of old charger stops
+
+V = {7: "M103", 8: "M105", 9: "T420", 10:"T333"}
+
 RO = [] # old electric us routes set
 
-B = [1, 2, 3, 4, 5, 6] #[E433, E420, E321, E490, 321D, 420D]
+B = {1: "E433", 2:"E420", 3:"E321", 4:"E490", 5:"321D", 6:"420D"} #[E433, E420, E321, E490, 321D, 420D] # electric bus-type
 BO = [] # old electric bus types set
 
-C = [] # charging type set
+C = [] # charging type set   # In the base case |C| = 1 -> c = 1 -> we just have one charging type -> In the random cases, so modified base cases -> we several c types
 S = []
 
 # BUS INPUTS
-cap_b = [153, 87, 85, 75, 90, 90] # passenger capacity of respective bus-types
+cap_b = [153, 87, 85, 75, 90, 90, 100, 160, 115, 170] # passenger capacity of respective bus-types              # ASK PROFESSOR!!!!! -> IMPLEMENTING WITH ARRAY OR WITH DICTIONARY!!!!!!!!!!!!!!!!!!!!!!!!!
 d_b_MAX = [15, 20, 40, 25, 15, 15] # driving range of fully charged b_bus_types-type electric bus
 ct_rjbc = [6, 6, 10, 6, 40, 30] # charging time of b_bus_types-type electric bus at c-type charging point of NON-DEPOT stop j of route r
 cbus_b = [500000, 350000, 400000, 400000, 300000, 330000] # b_bus_types-type electric bus capital cost (initial investment for buying bus)
@@ -39,21 +44,127 @@ ccc_j = 5000 # CAPITAL COST of one charger at stop j
 vcc_j = 500 # VARIABLE COST of one charger at stop j
 ccps_t = 200000 # CAPITAL COST of a power station at t
 cl_tj = 5000 # cost of linking power station spot t and stop j -> cl_tj = 0 if t is old and j has an old charger stop
-uoc = 5000000 # operating, depreciation & energy cost upper limit
+cc_uoc_pairs = [            # pairs for cc = capital cost upper limit (used in (2)) and for uoc = operating cost upper limit (used in (3))
+    (1e7, 5e6),
+    (1.5e7, 7e6),
+    (2e7, 1e7),
+    (3e7, 1.5e7),
+    (4e7, 2e7),
+    (1.8e7, 9e6),
+    (2.2e7, 1.1e7),
+    (2.4e7, 1.2e7),
+    (2.6e7, 1.3e7),
+    (2.8e7, 1.4e7)
+]
 csta_j = [] # capital cost of a recharging station at stop j
-cc = [] # total capital cost upper limit
 B_r = [[]] # electric bus type set of route r
 V_r = [[]] # route r set of non-battery vehicle types
-L_r = [[]] # cycle time of any vehicle on route r - time between 2 consecutive departures of the same vehicle on route r
+#L_r = [[]] # cycle time of any vehicle on route r - time between 2 consecutive departures of the same vehicle on route r
 C_b = [[]] # feasible charging type set for b-type electric buses
 co_b = [] # required charging type for bus type b
 nod_jc = [] # number of old c-type plugs devices at stop j
-p_c = [] # output power of one c-type plug device
+p_c = 260 # output power of one c-type plug device              ### ASK PROFESOR IF IT IS CONSTANT for all c or it CHANGES -> IN PAPER IS CONSTANT
 utp_t = [] # output power of a power station at spot t ∈ T
 T_j = [[]] # set power station spots feasible for stop j
-dem_r = [] # passenger demand of route r = past passenger capacity of all route r vehicles
-dem_0_r = [] # passenger capacity of route r to be satisfied by new electric buses and remaining non-battery vehicles
-ub_rb = [] # upper bound on the number of new b-type electric buses
+dem_r = {} # passenger demand of route r = past passenger capacity of all route r vehicles
+dem_0_r = {} # passenger capacity of route r to be satisfied by new electric buses and remaining non-battery vehicles
+ub_rb = {
+    # (1, 'busA'): 3,
+} # upper bound on the number of new b-type electric buses
+
+# ROUTE INPUTS
+lt_r = {1: 6, 2: 18, 3: 18, 4: 4, 5: 4, 6: 13, 7: 9, 8: 9, 9: 36, 10: 13, 11: 9, 12: 18, 13: 9, 14: 9, 15: 18, 16: 18, 17: 9, 18: 13, 19: 9, 20: 6, 21: 18, 22: 9, 23: 9, 24: 9, 25: 18,26: 9}
+
+ut_r = {1: 7, 2: 20, 3: 20, 4: 5, 5: 5, 6: 15, 7: 10, 8: 10, 9: 40, 10: 15, 11: 10, 12: 20, 13: 10, 14: 10, 15: 20, 16: 20, 17: 10, 18: 15, 19: 10, 20: 7, 21: 20, 22: 10, 23: 10, 24: 10, 25: 20, 26: 10}
+
+pi_r = {
+    1: [1, 2, 1],
+    2: [1, 2, 3, 2, 1],
+    3: [1, 2, 4, 2, 1],
+    4: [1, 5, 1],
+    5: [1, 5, 6, 5, 1],
+    6: [1, 7, 1],
+    7: [1, 8, 9, 8, 1],
+    8: [9, 10, 11, 10, 9],
+    9: [10, 7, 10],
+    10: [10, 7, 10],
+    11: [12, 13, 12],
+    12: [14, 15, 14],
+    13: [14, 13, 14],
+    14: [15, 14, 11, 14, 15],
+    15: [14, 11, 14],
+    16: [14, 16, 14],
+    17: [10, 16, 10],
+    18: [14, 16, 14],
+    19: [14, 17, 14],
+    20: [18, 19, 18],
+    21: [18, 2, 20, 2, 18],
+    22: [14, 2, 21, 2, 14, 13, 14],
+    23: [22, 15, 22],
+    24: [15, 2, 23, 2, 15],
+    25: [15, 2, 23, 2, 15],
+    26: [18, 16, 18]
+}
+
+nv_rb_0 = {
+    1 : {"M103": 3, "M105": 2, "T420": 0, "T333": 0},
+    2 : {"M103": 0, "M105": 2, "T420": 0, "T333": 0},
+    3 : {"M103": 1, "M105": 2, "T420": 0, "T333": 0},
+    4 : {"M103": 0, "M105": 0, "T420": 2, "T333": 5},
+    5 : {"M103": 0, "M105": 0, "T420": 4, "T333": 6},
+    6 : {"M103": 5, "M105": 0, "T420": 0, "T333": 0},
+    7 : {"M103": 0, "M105": 0, "T420": 2, "T333": 5},
+    8 : {"M103": 0, "M105": 0, "T420": 3, "T333": 6},
+    9 : {"M103": 0, "M105": 2, "T420": 0, "T333": 0},
+    10 : {"M103": 0, "M105": 0, "T420": 2, "T333": 2},
+    11 : {"M103": 0, "M105": 0, "T420": 2, "T333": 0},
+    12 : {"M103": 1, "M105": 2, "T420": 0, "T333": 0},
+    13 : {"M103": 0, "M105": 0, "T420": 2, "T333": 0},
+    14 : {"M103": 0, "M105": 0, "T420": 2, "T333": 5},
+    15 : {"M103": 2, "M105": 2, "T420": 0, "T333": 0},
+    16 : {"M103": 3, "M105": 3, "T420": 0, "T333": 0},
+    17 : {"M103": 0, "M105": 0, "T420": 2, "T333": 4},
+    18 : {"M103": 0, "M105": 0, "T420": 1, "T333": 3},
+    19 : {"M103": 3, "M105": 6, "T420": 0, "T333": 0},
+    20 : {"M103": 3, "M105": 6, "T420": 0, "T333": 0},
+    21 : {"M103": 2, "M105": 5, "T420": 0, "T333": 0},
+    22 : {"M103": 5, "M105": 7, "T420": 0, "T333": 0},
+    23 : {"M103": 0, "M105": 0, "T420": 3, "T333": 0},
+    24 : {"M103": 2, "M105": 5, "T420": 0, "T333": 0},
+    25 : {"M103": 1, "M105": 2, "T420": 0, "T333": 0},
+    26 : {"M103": 0, "M105": 0, "T420": 6, "T333": 8},
+
+}
+
+nob_rb = {
+    1: {"E433": 4},
+    2: {"E433": 0},
+    2: {"E433": 0},
+    4: {"E433": 0},
+    5: {"E433": 0},
+    6: {"E433": 0},
+    7: {"E433": 0},
+    8: {"E433": 0},
+    9: {"E433": 0},
+    10: {"E433": 0},
+    11: {"E433": 6},
+    12: {"E433": 0},
+    13: {"E433": 4},
+    14: {"E433": 0},
+    15: {"E433": 0},
+    16: {"E433": 0},
+    17: {"E433": 0},
+    18: {"E433": 0},
+    19: {"E433": 0},
+    20: {"E433": 0},
+    21: {"E433": 0},
+    22: {"E433": 0},
+    23: {"E433": 0},
+    24: {"E433": 0},
+    25: {"E433": 0},
+    26: {"E433": 0},
+}
+
 for r in R:
     dem_0_r[r] = dem_r[r] - gb.quicksum(nob_rb[r, b] * cap_b[b] for b in B_r[r])
 
@@ -63,6 +174,8 @@ for r in R:
         numerator = dem_0_r[r]
         denominator = cap_b[b]
         ub_rb[r, b] = math.ceil(numerator/denominator)
+
+
 
 
 
@@ -510,7 +623,7 @@ for r in R:
         for b in B_r[r]:                                            # Look at this constraint -> Not sure!!!
             for c in C_b[b]:
                 for s in range(1, n_rbc[r, b, c]):
-                    predecessors = S_rbc_s[(r, b, c, s)]
+                    predecessors = S_rbc_s[(r, b, c, s)]            ### IS this indexing written correctly or we should write the indices independently - [r, b, c, s]
                     ILP_Model.addConstr(
                         gb.quicksum(y_jrbc_s[j, r, b, c] for j in predecessors) -
                         l_rbc_s[r, b, c] * y_rbc_s[r, b, c] == 0,
