@@ -1,6 +1,7 @@
 import math
 import gurobipy as gb
 import numpy as np
+import data_inizialization as di
 
 # Initializing the model
 ILP_Model = gb.Model("Electric_Bus_Model")
@@ -26,7 +27,7 @@ RO = [] # old electric us routes set
 B = {1: "E433", 2:"E420", 3:"E321", 4:"E490", 5:"321D", 6:"420D"} #[E433, E420, E321, E490, 321D, 420D] # electric bus-type
 BO = [] # old electric bus types set
 
-C = [] # charging type set   # In the base case |C| = 1 -> c = 1 -> we just have one charging type -> In the random cases, so modified base cases -> we several c types
+C = [1] # charging type set   # In the base case |C| = 1 -> c = 1 -> we just have one charging type -> In the random cases, so modified base cases -> we several c types
 S = []
 
 # BUS INPUTS
@@ -164,6 +165,21 @@ nob_rb = {
     25: {"E433": 0},
     26: {"E433": 0},
 }
+
+n_rbc_data_2d = np.array([
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],  # E433
+    [2, 1, 1, 2, 2, 1, 0, 1, 1, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 0, 0, 0, 0],  # E420
+    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1],  # E321
+    [2, 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1],  # E490
+    [1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],  # 321D
+    [1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 0, 0, 0, 0],  # 420D
+])
+
+n_rbc_data = n_rbc_data_2d[:, :, np.newaxis] #just this case since we need also a c dimensione even if it is just 1
+
+n_rbc = di.init_n_rbc(n_rbc_data, R, B, C) # Initialize n_rbc with data from data_inizialization module
+
+
 
 for r in R:
     dem_0_r[r] = dem_r[r] - gb.quicksum(nob_rb[r, b] * cap_b[b] for b in B_r[r])
