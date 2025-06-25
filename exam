@@ -21,9 +21,28 @@ PROBLEMS:
 ### Questions
 
 1) differnces between nc_jrc and nd_jrc_ct (page 14 over constraint 31)
+    - casin haha
 2) Missing data for some dicts, we invent them? How? Or  do we wait for the dataset from the researchers?
+    - Create data if not possible to be obtained
+    -  work with classes and instances
 3) Is it ok to create different files for the different rando problems we have to implement? 
 4) Constraint 30, how to implement? why no loop for c values?
+    - looping for c (in C???) is intended!
 5) We have the values for the Base case with c=1. What to do for the values for the modified base case 1? (multiple c values -> we do not have the values od the inputs that depend on multiple c)
 6) Implementing with dicts or with sets (like cap_b)?
-7) 
+
+usare network x per generare una rete per caso base
+
+### TO DO LIST
+
+- implement classes to create an instance and work with that
+- the main must be short
+- create a small dataset for base case to put in the model class and try
+- understand heruistics
+- implement base case and with heuristics
+-
+1) finish constraints
+2) create a smaaaaall dataset to try and print the result
+3) understand Heuristic
+4) implemnt class "model" and maybe class "dataset"
+5) compare heuristic with correct algotirhm
