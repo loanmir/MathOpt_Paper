@@ -523,7 +523,7 @@ for j in N - D:
             name=f"Constraint_31_{j}_{c}"
         )
 
-# (32)                              #### from here on -> ASK profesor for tips on how to implement the additional sets -> B_rc an R_jc and so on!
+# (32)
 for j in N - D:
         for c in C:
             for r in R_jc[j,c]:
@@ -537,7 +537,7 @@ for j in N - D:
         for c in C:
             for r in R_jc[j,c]:
                 ILP_Model.addConstr(
-                nc_jrc[j, r, c] <= nc_jrc_ct[j, r, c],
+                nc_jrc[j, r, c] <= nc_jrc_ct[j, r, c],          # (33) and (35)
                 name=f"Constraint_33_{j}_{r}_{c}"
             )
 
