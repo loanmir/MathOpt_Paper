@@ -35,6 +35,10 @@ PROBLEMS:
 
 5) We have the values for the Base case with c=1. What to do for the values for the modified base case 1? (multiple c values -> we do not have the values od the inputs that depend on multiple c)
 6) Implementing with dicts or with sets (like cap_b)?
+    Try to implement using classes, by creating
+7) Ask clarification for purpose of variable y_rbcob in constraint (6)
+8) Ask about the constraint (6) -> the variable y_rbcob!
+9) Ask for L_r -> it says that L_r = ut_r * number of all old vehicles operating on this route!
 
 usare network x per generare una rete per caso base
 
@@ -52,10 +56,7 @@ usare network x per generare una rete per caso base
 4) implemnt class "model" and maybe class "dataset"
 5) compare heuristic with correct algotirhm
 
-    Try to implement using classes, by creating
-7) Ask clarification for purpose of variable y_rbcob in constraint (6)
-8) Ask about the constraint (6) -> the variable y_rbcob!
-9) Ask for L_r -> it says that L_r = ut_r * number of all old vehicles operating on this route!
+
 
 
 NETWORK X !!! -> for the creation of instance network of buses and routes!!
