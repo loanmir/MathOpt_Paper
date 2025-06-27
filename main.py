@@ -3,24 +3,48 @@ import gurobipy as gb
 import numpy as np
 import random
 import data_inizialization as di
+import networkx as nx
+
+
+# ================================
+# 1. GRAPH CREATION
+# ================================
+G = nx.DiGraph()
+G.add_node("Depot1", type="depot", charging_possible=True)
+G.add_node("Depot2", type="depot", charging_possible=True)
+G.add_node("Stop1", type="stop", charging_possible=True)
+G.add_node("Stop2", type="stop", charging_possible=False)
+G.add_node("Stop3", type="stop", charging_possible=True)
+G.add_node("Stop4", type="stop", charging_possible=False)
+G.add_node("Stop5", type="stop", charging_possible=True)
+
+G.add_edge("Depot1", "Stop1", distance=3)
+G.add_edge("Stop1", "Stop2", distance=4)
+G.add_edge("Stop2", "Stop3", distance=2)
+G.add_edge("Stop3", "Stop5", distance=5)
+G.add_edge("Stop5", "Depot2", distance=4)
+G.add_edge("Depot1", "Stop4", distance=6)
+G.add_edge("Stop4", "Stop5", distance=7)
+G.add_edge("Depot2", "Stop3", distance=3)
 
 random.seed(42)
+
+
 # Initializing the model
 ILP_Model = gb.Model("Electric_Bus_Model")
 
-# PARAMETERS!!!!!!
-R = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26] # route set
-D = {
-    1: (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14),
-    2: (15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26)
-} # depot set
+# PARAMETERS
+R = ["r1","r2","r3","r4"] # route set
+D = ["d1", "d2"] # depot set
 
-T = [] # power station spot set
-indices = [1,2] + list(range(5,20))
-TO = [f"D{d}" for d in D.keys()] + indices # old power station spot set
+N = list(G.nodes) # feasible charging stop set
+NO = [stop for stop in N if G.nodes[stop].get("charging_possible", True)] # set of old charger stops
 
-N = list(range(1,24)) # feasible charging stop set
-NO = [] # set of old charger stops
+T = [stop for stop in N] # power station spot set (considering only one spot for each stop)
+stops_to_remove = ["Stop1", "Stop2"] # stops to remove from the power station spot set
+TO = T - stops_to_remove# old power station spot set
+
+
 
 V = {7: "M103", 8: "M105", 9: "T420", 10:"T333"} # non battery vehicle type set
 
