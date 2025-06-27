@@ -1,8 +1,10 @@
 import math
 import gurobipy as gb
 import numpy as np
+import random
 import data_inizialization as di
 
+random.seed(42)
 # Initializing the model
 ILP_Model = gb.Model("Electric_Bus_Model")
 
@@ -20,7 +22,7 @@ TO = [f"D{d}" for d in D.keys()] + indices # old power station spot set
 N = list(range(1,24)) # feasible charging stop set
 NO = [] # set of old charger stops
 
-V = {7: "M103", 8: "M105", 9: "T420", 10:"T333"}
+V = {7: "M103", 8: "M105", 9: "T420", 10:"T333"} # non battery vehicle type set
 
 RO = [] # old electric us routes set
 
@@ -28,7 +30,7 @@ B = {1: "E433", 2:"E420", 3:"E321", 4:"E490", 5:"321D", 6:"420D"} #[E433, E420, 
 BO = [] # old electric bus types set
 
 C = [1] # charging type set   # In the base case |C| = 1 -> c = 1 -> we just have one charging type -> In the random cases, so modified base cases -> we several c types
-S = []
+S_rbc_s = []   # Look how to implement this
 
 # BUS INPUTS
 cap_b = [153, 87, 85, 75, 90, 90, 100, 160, 115, 170] # passenger capacity of respective bus-types              # ASK PROFESSOR!!!!! -> IMPLEMENTING WITH ARRAY OR WITH DICTIONARY!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -58,20 +60,65 @@ cc_uoc_pairs = [            # pairs for cc = capital cost upper limit (used in (
     (2.8e7, 1.4e7)
 ]
 csta_j = [] # capital cost of a recharging station at stop j
-B_r = [[]] # electric bus type set of route r
-V_r = [[]] # route r set of non-battery vehicle types
+
+B_r = {
+    1: [1, 2],
+    2: [1, 3, 4],
+    3: [2, 5],
+    4: [1, 2, 3],
+    5: [4, 5, 6],
+    6: [2, 6],
+    7: [1, 3],
+    8: [4, 5],
+    9: [2, 3, 6],
+    10: [1, 5, 6]
+} # electric bus type set of route r
+
+V_r = {
+    1: [7, 8],
+    2: [8],
+    3: [7, 9],
+    4: [10],
+    5: [7, 8, 10],
+    6: [9],
+    7: [7, 8, 9],
+    8: [10],
+    9: [7, 9, 10],
+    10: [8, 10]
+}  # route r set of non-battery vehicle types
+
 #L_r = [[]] # cycle time of any vehicle on route r - time between 2 consecutive departures of the same vehicle on route r
-C_b = [[]] # feasible charging type set for b-type electric buses
-co_b = [] # required charging type for bus type b
+
+C_b = {
+    1: [1],
+    2: [1],
+    3: [1],
+    4: [1],                                 # Since in base case we have C = [1] then each bus type supports the same single charging type
+    5: [1],
+    6: [1]
+} # feasible charging type set for b-type electric buses
+
+B_rc = {
+    (1, 1): [1],
+    (2, 1): [1, 3],
+    (3, 1): [2],
+    (4, 1): [1],                        # Also here we have one single charger type
+    (5, 1): [4, 5],
+    (6, 1): [2],
+    (7, 1): [3],
+    (8, 1): [4],
+    (9, 1): [2, 6],
+    (10, 1): [5]
+} # type set of c-type charging electric buses of route r
+
+co_b = [] # required charging type for bus type b                                                                               ## NOT CONVINCED ABOUT THIS!!!
 nod_jc = [] # number of old c-type plugs devices at stop j
 p_c = 260 # output power of one c-type plug device              ### ASK PROFESOR IF IT IS CONSTANT for all c or it CHANGES -> IN PAPER IS CONSTANT
 utp_t = [] # output power of a power station at spot t ∈ T
 T_j = [[]] # set power station spots feasible for stop j
 dem_r = {} # passenger demand of route r = past passenger capacity of all route r vehicles
-dem_0_r = {} # passenger capacity of route r to be satisfied by new electric buses and remaining non-battery vehicles
-ub_rb = {
-    # (1, 'busA'): 3,
-} # upper bound on the number of new b-type electric buses
+
+
 
 # ROUTE INPUTS
 lt_r = {1: 6, 2: 18, 3: 18, 4: 4, 5: 4, 6: 13, 7: 9, 8: 9, 9: 36, 10: 13, 11: 9, 12: 18, 13: 9, 14: 9, 15: 18, 16: 18, 17: 9, 18: 13, 19: 9, 20: 6, 21: 18, 22: 9, 23: 9, 24: 9, 25: 18,26: 9}
@@ -105,7 +152,7 @@ pi_r = {
     24: [15, 2, 23, 2, 15],
     25: [15, 2, 23, 2, 15],
     26: [18, 16, 18]
-}
+} # route r cycle
 
 nv_rb_0 = {
     1 : {"M103": 3, "M105": 2, "T420": 0, "T333": 0},
@@ -164,7 +211,7 @@ nob_rb = {
     24: {"E433": 0},
     25: {"E433": 0},
     26: {"E433": 0},
-}
+} # number of old b-type electric buses on route r
 
 n_rbc_data_2d = np.array([
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],  # E433
@@ -180,13 +227,17 @@ n_rbc_data = n_rbc_data_2d[:, :, np.newaxis] #just this case since we need also 
 n_rbc = di.init_n_rbc(n_rbc_data, R, B, C) # Initialize n_rbc with data from data_inizialization module
 
 
-
+dem_0_r = {} # passenger capacity of route r to be satisfied by new electric buses and remaining non-battery vehicles
 for r in R:
-    dem_0_r[r] = dem_r[r] - gb.quicksum(nob_rb[r, b] * cap_b[b] for b in B_r[r])
+    dem_0_r[r] = dem_r[r] - gb.quicksum(nob_rb[r, b] * cap_b[b] for b in B_r[r])  ## calculating dem_0_r!
 
 # we need to calculate it! -> ASK also this to the professor!!!!
+
+ub_rb = {
+    # (1, 'busA'): 3,
+} # upper bound on the number of new b-type electric buses
 for r in R:
-    for b in B_r[r]: # assuming B_r[r] gives buses relevant to route r
+    for b in B_r[r]: # assuming B_r[r] gives buses relevant to route r            ## calculating ub_rb
         numerator = dem_0_r[r]
         denominator = cap_b[b]
         ub_rb[r, b] = math.ceil(numerator/denominator)
@@ -201,30 +252,29 @@ for r in R:
 #-------------------------------- MAIN decision variables------------------------------#
 
 # Quantity of new buses variables
-nb_rbc = ILP_Model.addVars([r for r in range(R)], [b for b in range(B)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="nb_rbc")
-y_rbc = ILP_Model.addVars([r for r in range(R)], [b for b in range(B)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="y_rbc")
-y_r = ILP_Model.addVars([r for r in range(R)], vtype=gb.GRB.BINARY, name="y_r")
-y_rb = ILP_Model.addVars([r for r in range(R)], [b for b in range(B)] , vtype=gb.GRB.BINARY, name="y_rb")
+nb_rbc = ILP_Model.addVars([r for r in range(R)], [b for b in range(B_r[r])], [c for c in range(C_b[b])], vtype=gb.GRB.INTEGER, lb=0, ub={(r,b): ub_rb[r, b] for r in range(r) for b in range(B_r)}, name="nb_rbc") # constraint (50) integrated
+y_rbc = ILP_Model.addVars([r for r in range(R)], [b for b in range(B_r[r])], [c for c in range(C_b[b])], vtype=gb.GRB.BINARY, name="y_rbc") # constraint (59) already integrated here
+y_r = ILP_Model.addVars([r for r in range(R)], vtype=gb.GRB.BINARY, name="y_r") # constraint (52) already integrated here
+y_rb = ILP_Model.addVars([r for r in range(R)], [b for b in range(B_r[r])] , vtype=gb.GRB.BINARY, name="y_rb") # constraint (58) already integrated here
 
 # Variables related to the assignment of electric buses for charging
-y_rbc_s = ILP_Model.addVars([r for r in range(R)], [b for b in range(B)], [c for c in range(C)], s, vtype=gb.GRB.BINARY, name="y_rbc_s")
+y_rbc_s = ILP_Model.addVars([r for r in range(R)], [b for b in B_r[r]], [c for c in C_b[b]], [s for s in range(1, n_rbc[(r, b, c)] + 1)], vtype=gb.GRB.BINARY, name="y_rbc_s")  ## URROR IN c !!!!
 y_bc = ILP_Model.addVars([b for b in range(B)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="y_bc")
 y_jrbc = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [b for b in range(B)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="y_jrbc")
 
 #  Variables related to the charging equipment quantities
-ns_j = ILP_Model.addVars([j for j in range(N)], vtype=gb.GRB.BINARY, name="ns_j")
-alpha_jc = ILP_Model.addVars([j for j in range(N)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="alpha_jc")
+ns_j = ILP_Model.addVars([j for j in range(N - NO)], vtype=gb.GRB.BINARY, name="ns_j") # constraint (57) already integrated here
+alpha_jc = ILP_Model.addVars([j for j in range(D - NO)], vtype=gb.GRB.BINARY, name="alpha_jc") # constraint (60) already integrated here
 nc_jc = ILP_Model.addVars([j for j in range(N)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="nc_jc")
-# for nc_jc value look at page 14!!!
-np_jc = ILP_Model.addVars([j for j in range(N)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="np_jc")
+np_jc = ILP_Model.addVars([j for j in range(D - NO)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="np_jc") # constraint (56) already integrated here
 
 # Variables related to the allocation and links of power stations with the charging locations
-beta_t = ILP_Model.addVars([t for t in range(T)], vtype=gb.GRB.BINARY, name="beta_t")
-gamma_tj = ILP_Model.addVars([t for t in range(T)], [j for j in range(N)], vtype=gb.GRB.BINARY, name="gamma_tj")
+beta_t = ILP_Model.addVars([t for t in range(T - TO)], vtype=gb.GRB.BINARY, name="beta_t") # constraint (46) already integrated here
+gamma_tj = ILP_Model.addVars([t for t in range(T - TO)], vtype=gb.GRB.BINARY, name="gamma_tj")
 
 # Additional variables
-Z_r = ILP_Model.addVars([r for r in range(R)], vtype=gb.GRB.INTEGER, name="Z_r")
-nv_rb = ILP_Model.addVars([r for r in range(R)], [b for b in range(B)], vtype=gb.GRB.INTEGER, name="nv_rb")
+Z_r = ILP_Model.addVars([r for r in range(R)], vtype=gb.GRB.INTEGER,lb=0, ub={r: dem_r[r] for r in range(R)}, name="Z_r") # constraint (49) integrated
+nv_rb = ILP_Model.addVars([r for r in range(R)], [b for b in range(V_r[r])], vtype=gb.GRB.INTEGER,lb=0, ub={(r, b): nv_rb_0[r, b] for r in range(R) for b in range(V_r[r])}, name="nv_rb") # constraint (51) integrated
 
 #--------------------------------------------------------------------------------------#
 
@@ -240,14 +290,21 @@ eta_jrc_2 = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c f
 xi_jrc = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="xi_jrc")
 xi_jrcb = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], [b for b in range(B)], vtype=gb.GRB.BINARY, name="xi_jrcb")
 
-nc_jrc = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="nc_jrc")
-nc_jrc_b = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="nc_jrc_b")
-nc_jrc_ct = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="nc_jrc_ct")
+nc_jrc = ILP_Model.addVars([r for r in range(R)], [j for j in pi_r[r]], [c for c in range(C)], vtype=gb.GRB.INTEGER, lb=0, ub=lambda idx: min(up[idx] * uc[idx[2]], nc_jrc_max[idx]), name="nc_jrc") # constraint (63) integrated here
+nc_jrc_b = ILP_Model.addVars([r for r in range(R)], [j for j in pi_r[r]], [c for c in range(C)], [b for b in B_r[r]] ,vtype=gb.GRB.INTEGER, lb=0, name="nc_jrc_b")
+nc_jrc_ct = ILP_Model.addVars([r for r in range(R)], [j for j in pi_r[r]], [c for c in range(C)], vtype=gb.GRB.INTEGER, lb=0, ub={(j, r, c): nc_jrc_max[j, r, c] for r in range(R) for j in range(pi_r[r]) for c in range(C)}, name="nc_jrc_ct")
+# constraint (61) already integrated here
 
 # from (43) to (44)
-y_jrbc_s = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [b for b in range(B)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="y_jrbc_s")
+y_jrbc_s = ILP_Model.addVars([r for r in range(R)], [b for b in range(B_r[r])], [j for j in range(pi_r[r])], [c for c in range(C_b[b])], [s for s in range(1, n_rbc[(r, b, c)] + 1)], vtype=gb.GRB.BINARY, name="y_jrbc_s")
 
-#-------------------------------------------------------------------------------------#
+
+
+
+
+
+
+
 
 #-------------------------------- Objective function -----------------------------------#
 
@@ -265,29 +322,30 @@ ILP_Model.setObjective(
 #-------------------------------- Constraints --------------------------------#
 
 # (2)
-
-ILP_Model.addConstr(
-    (gb.quicksum(csta_j[j] * ns_j[j] for j in N) +
-    gb.quicksum(ccp_c[c] * np_jc[j, c] for j in N for c in C) +
-    gb.quicksum(gb.quicksum (cbus_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b[b]) for b in B_r[r]) for r in R) +
-    gb.quicksum(ccps_t[t] * beta_t[t] for t in T-TO) +
-    gb.quicksum(gb.quicksum(cl_tj[t, j] * gamma_tj[t, j] for j in N-NO) for t in T-TO)
-    <= cc)
-    , name="capital_cost_constraint"
+for cc, uoc in cc_uoc_pairs:
+    ILP_Model.addConstr(
+        (gb.quicksum(csta_j[j] * ns_j[j] for j in N) +
+        gb.quicksum(ccp_c[c] * np_jc[j, c] for j in N for c in C) +
+        gb.quicksum(gb.quicksum (cbus_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b[b]) for b in B_r[r]) for r in R) +
+        gb.quicksum(ccps_t[t] * beta_t[t] for t in range(T - TO)) +
+        gb.quicksum(gb.quicksum(cl_tj[t, j] * gamma_tj[t, j] for j in range(N - NO)) for t in range(T - TO))
+        <= cc),
+        name="capital_cost_constraint"
 )
 
 
 # (3)
 
-ILP_Model.addConstr(
-    (gb.quicksum(csta_j[j] * ns_j[j] for j in N) +
-    gb.quicksum(ccp_c[c] * np_jc[j, c] for j in N for c in C) +
-    gb.quicksum(gb.quicksum (cbus_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b[b]) for b in B_r[r]) for r in R) +
-    gb.quicksum(ccps_t[t] * beta_t[t] for t in T-TO) +
-    gb.quicksum(vcc_j[j] * ns_j[j] + gb.quicksum(vcp_c[c] * np_jc[j, c] for c in C) for j in N) +
-    gb.quicksum(gb.quicksum(vcb_rb[r, b] for b in B_r) for r in R) 
-    <= uoc)
-    , name="variable_cost_constraint"
+for cc, uoc in cc_uoc_pairs:
+    ILP_Model.addConstr(
+        (gb.quicksum(csta_j[j] * ns_j[j] for j in N) +
+        gb.quicksum(ccp_c[c] * np_jc[j, c] for j in N for c in C) +
+        gb.quicksum(gb.quicksum (cbus_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b[b]) for b in B_r[r]) for r in R) +
+        gb.quicksum(ccps_t[t] * beta_t[t] for t in T-TO) +
+        gb.quicksum(vcc_j[j] * ns_j[j] + gb.quicksum(vcp_c[c] * np_jc[j, c] for c in C) for j in N) +
+        gb.quicksum(gb.quicksum(vcb_rb[r, b] for b in B_r[r]) for r in R)
+        <= uoc),
+        name="variable_cost_constraint"
 )
 
 '''
@@ -302,8 +360,8 @@ ILP_Model.addConstr(
 # (4)
 for j in N:
     ILP_Model.addConstr(
-        gb.quicksum((nc_jc[j, c] + nod_jc[j, c]) * p_c[c] for c in C) <= gb.quicksum(utp_t[t] * beta_t[t] for t in T_j[j]),
-        name=f"Constraint_4_{j}"
+        gb.quicksum((nc_jc[j, c] + nod_jc[j, c]) * p_c for c in C) <= gb.quicksum(utp_t[t] * beta_t[t] for t in T_j[j]),   ## In this case we justr have p_c = 250!
+        name=f"Constraint_4_{j}"                                                                                           ## In updated base case we have several c's
     )
 
 # (5)
@@ -317,7 +375,7 @@ for t in T:
 for r in R:
     for b in BO & B_r[r]:
         ILP_Model.addConstr(
-            gb.quicksum(y_rbc[r, b, c] - y_rbco_b[r, b, co_b[b]] for c in C_b[b]) <= 0,
+            gb.quicksum(y_rbc[r, b, c] - y_rbco_b[r, b, co_b[b]] for c in C_b[b]) <= 0,         # take a look here on co_b!!! CAREFUL!
             name=f"Constraint_6_{r}_{b}"
         )
 
@@ -347,10 +405,10 @@ for b in B - BO:
     )
 
 # (10)
-# nop_jc and up_j are both input variables -> Waiting for the data!
+
 for j in N:
     ILP_Model.addConstr(
-        gb.quicksum(np_jc[j, c] for c in C) + gb.quicksum(nop_jc[j, c] for c in C) <= up_j[j],
+        gb.quicksum(np_jc[j, c] for c in C) + gb.quicksum(nop_jc[j, c] for c in C) <= up_j[j],   # nop_jc and up_j are both input variables -> Waiting for the data!
         name=f"Constraint_10_{j}"
     )
 
@@ -373,7 +431,7 @@ for r in R:
 for r in R:
     for b in V_r[r]:
         ILP_Model.addConstr(
-            nv_rb[r, b] <= nv_0_rb[r, b],
+            nv_rb[r, b] <= nv_rb_0[r, b],
             name=f"Constraint_13_{r}_{b}"
         )
 
@@ -445,8 +503,8 @@ for j in N - NO:
 for j in N - D:
     for c in C:
         ILP_Model.addConstr(
-            np_jc[j, c] >= ((nc_jc[j, c] + nod_jc[j, c])/uc_c[c]) - nop_jc[j, c],
-            name=f"Constraint_22_{j}_{c}"
+            np_jc[j, c] >= ((nc_jc[j, c] + nod_jc[j, c])/uc_c[c]) - nop_jc[j, c],       #nod_jc is an input -> Currently empty
+            name=f"Constraint_22_{j}_{c}"                                               # uc_c also an input -> Waiting for data!
         )
 
 # (23)
@@ -483,7 +541,7 @@ for j in D - NO:
 
 # (27)
 R_jc_size = len([j,c]) # NOT CORRECT -> double loop needed!! -> Create the data structure for [j,c]!!!
-
+                                        # We still don't have R_jc!!
 for j in D - NO:
     for c in C:
         ILP_Model.addConstr(
@@ -498,7 +556,7 @@ for r in R:
         ut_r[r] * gb.quicksum(nv_rb[r, b] for b in V_r[r]),
         name=f"Constraint_28_{r}"
     )
-
+                                    #L_r is an input -> ut_r * (nob_rb + |V_r|) ?????????? NOT SURE, ASK ALSO THIS!!
 # (29)
 for r in R:
     ILP_Model.addConstr(
@@ -509,9 +567,11 @@ for r in R:
 
 # (30)
 for j in D - NO:
-    ILP_Model.addConstr(
-        uc_c[c]    # I DON'T KNOW -> UNDERSTAND WHY THERE IS NO LOOP with index c!!!!!
-    )
+    for c in C:
+        ILP_Model.addConstr(
+            uc_c[c]  * alpha_jc[j, c] - nc_jc[j, c] <= 0,
+            name=f"Constraint_30_{j}_{c}"
+        )
 
     ### uc_c is an input variable!
 
@@ -523,7 +583,7 @@ for j in N - D:
             name=f"Constraint_31_{j}_{c}"
         )
 
-# (32)                              #### from here on -> ASK profesor for tips on how to implement the additional sets -> B_rc an R_jc and so on!
+# (32)
 for j in N - D:
         for c in C:
             for r in R_jc[j,c]:
@@ -537,7 +597,7 @@ for j in N - D:
         for c in C:
             for r in R_jc[j,c]:
                 ILP_Model.addConstr(
-                nc_jrc[j, r, c] <= nc_jrc_ct[j, r, c],
+                nc_jrc[j, r, c] <= nc_jrc_ct[j, r, c],          # (33) and (35)
                 name=f"Constraint_33_{j}_{r}_{c}"
             )
 
@@ -592,9 +652,11 @@ for j in N - D:
         for c in C:
             for r in R_jc[j,c]:
                 for b in B_rc[r, c]:
-                    nc_jrc_ct[j, r, c] <= ((ct_rjbc[r, j, b, c] * y_jrbc[j, r, b, c]) / lt_r[r])  + nc_jcr_max[j, c, r] (1 - xi_jrbc[j, r, b, c]),
+                    nc_jrc_ct[j, r, c] <= ((ct_rjbc[r, j, b, c] * y_jrbc[j, r, b, c]) / lt_r[r])  + nc_jcr_max[j, c, r] (1 - xi_jrcb[j, r, b, c]),
                     name=f"Constraint_39_{j}_{r}_{c}_{b}"
+                                                            # noc_jrc_ct = (max{ct_jrbc for b in BO_rc}) / lt_r          !!!!!
 
+                                                            # nc_jrc_max = math.ceil((max{ct_jrbc for b in B_rc})/ lt_r)    !!!!!
 # (40)
 for j in N - D:
         for c in C:
@@ -642,7 +704,7 @@ for r in R:
                     predecessors = S_rbc_s[(r, b, c, s)]            ### IS this indexing written correctly or we should write the indices independently - [r, b, c, s]
                     ILP_Model.addConstr(
                         gb.quicksum(y_jrbc_s[j, r, b, c] for j in predecessors) -
-                        l_rbc_s[r, b, c] * y_rbc_s[r, b, c] == 0,
+                        l_rbc_s[r, b, c] * y_rbc_s[r, b, c] == 0,                   # l_rbc_s is the number of stops in a scenario s! -> How to find this value!
                         name=f"Constraint_44_{r}_{b}_{c}_{s}"
                     )
 
@@ -654,20 +716,22 @@ for t in TO:
     )
 
 # (46)
-# T_minus_TO = [t for t in T if t not in TO]
+# Implemented directly in the variable declaration
 
 # (47)
 for j in NO:
-    for t in TO_j[j]:
+    for t in TO[j]:                             # here it refers to TO_j in paper
         ILP_Model.addConstr(
             gamma_tj[t, j] == 1,
             name=f"Constraint_47_{t}"
         )
 
 # (48)
-# same problem as constraint 46
+# Implemented directly in the variable declaration
 
 # (49)
+# Implemented directly in the variable declaration
+'''
 for r in R:
     ILP_Model.addConstr(
         Z_r[r] >= 0,
@@ -677,8 +741,10 @@ for r in R:
         Z_r[r] <= dem_r[r],
         name=f"Constraint_49_b_{r}"
     )
-
+'''
 # (50)
+# Implemented directly in the variable declaration!
+'''
 for r in R:
     for b in B_r[r]:
         for c in C_b[b]:
@@ -690,21 +756,23 @@ for r in R:
                 nb_rbc[r, b, c] <= ub_rb[r, b],
                 name=f"Constraint_50_b_{r}_{b}_{c}"
             )
-
+'''
 # (51)
-for r in R:
+# Implemented directly in the variable declaration!
+'''for r in R:
     for b in V_r[r]:
         ILP_Model.addConstr(
             nv_rb[r, b] >= 0,
             name=f"Constraint_51_a_{r}_{b}"
         )
         ILP_Model.addConstr(
-            nv_rb[r, b] <= nv_0_rb[r, b],
+            nv_rb[r, b] <= nv_rb_0[r, b],
             name=f"Constraint_51_b_{r}_{b}"
         )
+'''
 
 # (52)
-# same problem as constraint 46
+# Implemented directly in the variable declaration!
 
 # (53)
 for j in N - D:
@@ -714,7 +782,7 @@ for j in N - D:
             name=f"Constraint_53_a_{j}_{c}"
         )
         ILP_Model.addConstr(
-            nc_jc[j, c] <= (up_j[j] * uc_c[c] - nod_jc[j, c]),
+            nc_jc[j, c] <= (up_j[j] * uc_c[c] - nod_jc[j, c]),          # up_j and uc_c are inputs!!
             name=f"Constraint_53_b_{j}_{c}"
         )
 
@@ -730,29 +798,39 @@ for j in N - D:
             name=f"Constraint_54_b_{j}_{c}"
         )
 
-# Ask professor for this constraints!!!!!! how to implement them!!
 
 # (55)
-# What is the difference with constraint 53?
+
+for j in D - NO:
+    for c in C:
+        ILP_Model.addConstr(
+            nc_jc[j, c] >= 0,
+            name=f"Constraint_53_a_{j}_{c}"
+        )
+        ILP_Model.addConstr(
+            nc_jc[j, c] <= (uc_c[c] - nod_jc[j, c]),          # up_j and uc_c are inputs!!
+            name=f"Constraint_53_b_{j}_{c}"
+        )
+
 
 # (56)
-# same problem as constraint 46
+# Implemented directly in the variable declaration!
 
 # (57)
-# same problem as constraint 46
+# Implemented directly in the variable declaration!
 
 # (58)
-# same problem as constraint 46
+# Implemented directly in the variable declaration!
 
 # (59)
-# same problem as constraint 46
+# Implemented directly in the variable declaration!
 
 # (60)
-alpha_jc = {}
-for j in D - NO:
-    alpha_jc[j] = ILP_Model.addVar(vtype=gb.GRB.BINARY, name=f"alpha_{j}_c")
+# Implemented directly in the variable declaration!
 
 # (61)
+# Implemented directly in the variable declaration!
+'''
 for r in R:
     for j in pi_r[r]:
         for c in C: 
@@ -761,24 +839,27 @@ for r in R:
             name=f"Constraint_61_a_{j}_{r}_{c}"
         )
             ILP_Model.addConstr(
-            nc_jrc_ct[j, r, c] <= nc_jrc_max[j, r, c],
+            nc_jrc_ct[j, r, c] <= nc_jrc_max[j, r, c],          # nc_jrc_max = math.ceil((max{ct_jrbc for b in B_rc})/ lt_r)    !!!!!
             name=f"Constraint_61_b_{j}_{r}_{c}"
         )
-
+'''
 # (62)
 for r in R:
     for j in pi_r[r]:
         for c in C:
-            ILP_Model.addConstr(
-            nc_jrc_b[j, r, c] >= 0,
+            '''ILP_Model.addConstr(
+            nc_jrc_b[j, r, c] >= 0,                                 Already added lower bound in variable declaration!
             name=f"Constraint_62_a_{j}_{r}_{c}"
-        )
+        )'''
             ILP_Model.addConstr(
             nc_jrc_b[j, r, c] <= gb.quicksum(ub_rb[r, b] + nob_rb[r, b] for b in B_r[r]),
             name=f"Constraint_62_b_{j}_{r}_{c}"
         )
 
 # (63)
+# Implemented directly in the variable declaration!
+
+'''
 for r in R:
     for j in pi_r[r]:
         for c in C:
@@ -787,21 +868,21 @@ for r in R:
             name=f"Constraint_63_a_{j}_{r}_{c}"
         )
             ILP_Model.addConstr(
-            nc_jrc[j, r, c] <= min(up_j[j] * uc_c[c], nc_jrc_max[j, r, c]),
+            nc_jrc[j, r, c] <= min(up_j[j] * uc_c[c], nc_jrc_max[j, r, c]),             # nc_jrc_max = math.ceil((max{ct_jrbc for b in B_rc})/ lt_r)    !!!!!
             name=f"Constraint_63_b_{j}_{r}_{c}"
         )
-
+'''
 # (64)
-# same problem as constraint 46
+# Implemented directly in the variable declaration! -> BUT ERROR IN CODE! (NOT SURE)
 
 # (65)
 # j not it S_rbc_s -----> ???
 
 # (66)
-# same problem as constraint 46
+# Implemented directly in the variable declaration! -> BUT ERROR IN CODE! (NOT SURE)
 
 
-
+ILP_Model.optimize()
 
 
 
