@@ -51,7 +51,7 @@ V = ["M103", "M104"] # non battery vehicle type set
 RO = [] # old electric us routes set
 
 B = ["E433", "E420", "E302"] #[E433, E420, E321, E490, 321D, 420D] # electric bus-type
-BO = [] # old electric bus types set
+BO = ["E433"] # old electric bus types set
 
 C = ["c1"] # charging type set   # In the base case |C| = 1 -> c = 1 -> we just have one charging type -> In the random cases, so modified base cases -> we several c types
 S_rbc_s = []   # Look how to implement this
@@ -135,7 +135,8 @@ T_j = {
     "Stop4": ["Stop4"],
     "Stop5": ["Stop5"],
 } # set power station spots feasible for stop j
-dem_r = {} # passenger demand of route r = past passenger capacity of all route r vehicles
+dem_r = {
+} # passenger demand of route r = past passenger capacity of all route r vehicles
 
 
 
