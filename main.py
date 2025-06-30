@@ -10,7 +10,7 @@ import networkx as nx
 # 1. GRAPH CREATION
 # ================================
 G = nx.DiGraph()
-G.add_node("Depot1", type="depot", charging_possible=True)
+G.add_node("Depot1", type="depot", charging_possible=True, cipolla=True)
 G.add_node("Depot2", type="depot", charging_possible=True)
 G.add_node("Stop1", type="stop", charging_possible=True)
 G.add_node("Stop2", type="stop", charging_possible=False)
@@ -35,14 +35,14 @@ ILP_Model = gb.Model("Electric_Bus_Model")
 
 # PARAMETERS
 R = ["r1","r2","r3","r4"] # route set
-D = ["d1", "d2"] # depot set
+D = [n for n, attr in G.nodes(data=True) if attr.get('type') == 'depot'] # depot set
 
 N = list(G.nodes) # feasible charging stop set
 NO = [stop for stop in N if G.nodes[stop].get("charging_possible", True)] # set of old charger stops
 
 T = [stop for stop in N] # power station spot set (considering only one spot for each stop)
-stops_to_remove = ["Stop1", "Stop2"] # stops to remove from the power station spot set
-TO = T - stops_to_remove# old power station spot set
+stops_to_remove = ["Stop2", "Stop4"] # stops to remove from the power station spot set
+TO = ["Depot1", "Depot2", "Stop1", "Stop3", "Stop5"]# old power station spot set
 
 
 
