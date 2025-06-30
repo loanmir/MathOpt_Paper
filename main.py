@@ -10,8 +10,8 @@ import networkx as nx
 # 1. GRAPH CREATION
 # ================================
 G = nx.DiGraph()
-G.add_node("Depot1", type="depot", charging_possible=True, cipolla=True)
-G.add_node("Depot2", type="depot", charging_possible=True)
+G.add_node("Depot1", type="depot", charging_possible=True)
+G.add_node("Depot2", type="depot", charging_possible=False)
 G.add_node("Stop1", type="stop", charging_possible=True)
 G.add_node("Stop2", type="stop", charging_possible=False)
 G.add_node("Stop3", type="stop", charging_possible=True)
@@ -41,27 +41,29 @@ N = list(G.nodes) # feasible charging stop set
 NO = [stop for stop in N if G.nodes[stop].get("charging_possible", True)] # set of old charger stops
 
 T = [stop for stop in N] # power station spot set (considering only one spot for each stop)
-stops_to_remove = ["Stop2", "Stop4"] # stops to remove from the power station spot set
-TO = ["Depot1", "Depot2", "Stop1", "Stop3", "Stop5"]# old power station spot set
+stops_to_remove = ["Depot2", "Stop2", "Stop4"] # stops to remove from the power station spot set
+TO = ["Depot1", "Stop1", "Stop3", "Stop5"]# old power station spot set
 
 
 
-V = {7: "M103", 8: "M105", 9: "T420", 10:"T333"} # non battery vehicle type set
+V = ["M103", "M104"] # non battery vehicle type set
 
 RO = [] # old electric us routes set
 
-B = {1: "E433", 2:"E420", 3:"E321", 4:"E490", 5:"321D", 6:"420D"} #[E433, E420, E321, E490, 321D, 420D] # electric bus-type
+B = ["E433", "E420", "E302"] #[E433, E420, E321, E490, 321D, 420D] # electric bus-type
 BO = [] # old electric bus types set
 
-C = [1] # charging type set   # In the base case |C| = 1 -> c = 1 -> we just have one charging type -> In the random cases, so modified base cases -> we several c types
+C = ["c1"] # charging type set   # In the base case |C| = 1 -> c = 1 -> we just have one charging type -> In the random cases, so modified base cases -> we several c types
 S_rbc_s = []   # Look how to implement this
 
 # BUS INPUTS
-cap_b = [153, 87, 85, 75, 90, 90, 100, 160, 115, 170] # passenger capacity of respective bus-types              # ASK PROFESSOR!!!!! -> IMPLEMENTING WITH ARRAY OR WITH DICTIONARY!!!!!!!!!!!!!!!!!!!!!!!!!
-d_b_MAX = [15, 20, 40, 25, 15, 15] # driving range of fully charged b_bus_types-type electric bus
-ct_rjbc = [6, 6, 10, 6, 40, 30] # charging time of b_bus_types-type electric bus at c-type charging point of NON-DEPOT stop j of route r
-cbus_b = [500000, 350000, 400000, 400000, 300000, 330000] # b_bus_types-type electric bus capital cost (initial investment for buying bus)
-vcb_rb = [270000, 180000, 200000, 170000, 180000, 200000] # variable cost of b_bus_types-type electric bus on route r
+capacities = [153, 87, 175, 130, 80] #starting from electric and then non battery vehicles
+
+cap_b = {node: cap for node, cap in zip(B + V, capacities)} # passenger capacity of respective bus-types              # ASK PROFESSOR!!!!! -> IMPLEMENTING WITH ARRAY OR WITH DICTIONARY!!!!!!!!!!!!!!!!!!!!!!!!!
+d_b_MAX = [15, 25, 20] # driving range of fully charged b_bus_types-type electric bus
+ct_rjbc = [6, 10, 13] # charging time of b_bus_types-type electric bus at c-type charging point of NON-DEPOT stop j of route r
+cbus_b = [400000, 500000, 350000] # b_bus_types-type electric bus capital cost (initial investment for buying bus)
+vcb_rb = [270000, 200000, 280000] # variable cost of b_bus_types-type electric bus on route r
 
 
 # COST INPUTS
@@ -75,71 +77,64 @@ cc_uoc_pairs = [            # pairs for cc = capital cost upper limit (used in (
     (1e7, 5e6),
     (1.5e7, 7e6),
     (2e7, 1e7),
-    (3e7, 1.5e7),
-    (4e7, 2e7),
-    (1.8e7, 9e6),
-    (2.2e7, 1.1e7),
-    (2.4e7, 1.2e7),
-    (2.6e7, 1.3e7),
-    (2.8e7, 1.4e7)
 ]
-csta_j = [] # capital cost of a recharging station at stop j
+
+csta_j = 100000 # capital cost of a recharging station at stop j
 
 B_r = {
-    1: [1, 2],
-    2: [1, 3, 4],
-    3: [2, 5],
-    4: [1, 2, 3],
-    5: [4, 5, 6],
-    6: [2, 6],
-    7: [1, 3],
-    8: [4, 5],
-    9: [2, 3, 6],
-    10: [1, 5, 6]
+    "r1": ["E433", "E420", "E302"],
+    "r2": ["E433"],         
+    "r3": ["E420", "E302"],
+    "r4": ["E433", "E420"],
 } # electric bus type set of route r
 
 V_r = {
-    1: [7, 8],
-    2: [8],
-    3: [7, 9],
-    4: [10],
-    5: [7, 8, 10],
-    6: [9],
-    7: [7, 8, 9],
-    8: [10],
-    9: [7, 9, 10],
-    10: [8, 10]
+    "r1": ["M103"],
+    "r2": ["M103", "M104"],         
+    "r3": ["M104"],
+    "r4": ["M104"],
 }  # route r set of non-battery vehicle types
 
 #L_r = [[]] # cycle time of any vehicle on route r - time between 2 consecutive departures of the same vehicle on route r
 
 C_b = {
-    1: [1],
-    2: [1],
-    3: [1],
-    4: [1],                                 # Since in base case we have C = [1] then each bus type supports the same single charging type
-    5: [1],
-    6: [1]
+    "E443": "c1",           # Since in base case we have C = [1] then each bus type supports the same single charging type
+    "E420": "c1",
+    "E302": "c1",
 } # feasible charging type set for b-type electric buses
 
 B_rc = {
-    (1, 1): [1],
-    (2, 1): [1, 3],
-    (3, 1): [2],
-    (4, 1): [1],                        # Also here we have one single charger type
-    (5, 1): [4, 5],
-    (6, 1): [2],
-    (7, 1): [3],
-    (8, 1): [4],
-    (9, 1): [2, 6],
-    (10, 1): [5]
+    "r1": {"c1": ["E433", "E420", "E302"], },
+    "r2": {"c1": ["E433"]},
+    "r3": {"c1": ["E420", "E302"]},
+    "r4": {"c1": ["E433", "E420"]},                        # Also here we have one single charger type
 } # type set of c-type charging electric buses of route r
 
-co_b = [] # required charging type for bus type b                                                                               ## NOT CONVINCED ABOUT THIS!!!
-nod_jc = [] # number of old c-type plugs devices at stop j
+co_b = {
+    "E443": "c1",           # Since in base case we have C = [1] then each bus type supports the same single charging type
+    "E420": "c1",
+    "E302": "c1",
+} # required charging type for bus type b   
+                                                                        
+nod_jc = {
+    (j, c): 0 for j in N if G.nodes[j] and G.nodes[j] for c in C
+} # number of old c-type plugs devices at stop j
+nod_jc["Depot1", "c1"] = 2
+nod_jc["Stop1", "c1"] = 1
+nod_jc["Stop3", "c1"] = 3
+nod_jc["Stop5", "c1"] = 1
+
 p_c = 260 # output power of one c-type plug device              ### ASK PROFESOR IF IT IS CONSTANT for all c or it CHANGES -> IN PAPER IS CONSTANT
-utp_t = [] # output power of a power station at spot t ∈ T
-T_j = [[]] # set power station spots feasible for stop j
+utp_t = 800 # output power of a power station at spot t ∈ T
+T_j = {
+    "Depot1": ["Depot1"],
+    "Depot2": ["Depot2"],
+    "Stop1": ["Stop1"],
+    "Stop2": ["Stop2"],
+    "Stop3": ["Stop3"],
+    "Stop4": ["Stop4"],
+    "Stop5": ["Stop5"],
+} # set power station spots feasible for stop j
 dem_r = {} # passenger demand of route r = past passenger capacity of all route r vehicles
 
 
