@@ -212,6 +212,8 @@ n_rbc = di.init_n_rbc(n_rbc_data, R, B, C) # Initialize n_rbc with data from dat
 dem_0_r = {} # passenger capacity of route r to be satisfied by new electric buses and remaining non-battery vehicles
 for r in R:
     dem_0_r[r] = dem_r[r] - sum(nob_rb[r].get(b, 0) * cap_b[b] for b in B_r[r])  ## calculating dem_0_r!
+    # .get used because if we don't find a "bus" we just have 0 and not a crash (like with nob_rb[r][b])
+    # no need of quicksum becuse we have only inputs and no variables
 
 # we need to calculate it! -> ASK also this to the professor!!!!
 
