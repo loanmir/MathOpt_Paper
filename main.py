@@ -23,6 +23,7 @@ G.add_edge("Stop1", "Stop2", distance=4)
 G.add_edge("Stop2", "Stop3", distance=2)
 G.add_edge("Stop3", "Stop5", distance=5)
 G.add_edge("Stop5", "Depot2", distance=4)
+G.add_edge("Stop5", "stop2", distance=6)
 G.add_edge("Depot1", "Stop4", distance=6)
 G.add_edge("Stop4", "Stop5", distance=7)
 G.add_edge("Depot2", "Stop3", distance=3)
@@ -35,6 +36,7 @@ ILP_Model = gb.Model("Electric_Bus_Model")
 
 # PARAMETERS
 R = ["r1","r2","r3","r4"] # route set
+
 D = [n for n, attr in G.nodes(data=True) if attr.get('type') == 'depot'] # depot set
 
 N = list(G.nodes) # feasible charging stop set
@@ -48,9 +50,9 @@ TO = ["Depot1", "Stop1", "Stop3", "Stop5"]# old power station spot set
 
 V = ["M103", "M104"] # non battery vehicle type set
 
-RO = [] # old electric us routes set
+RO = [] # old electric bus routes set
 
-B = ["E433", "E420", "E302"] #[E433, E420, E321, E490, 321D, 420D] # electric bus-type
+B = ["E433", "E420", "E302"] # electric bus-type
 BO = ["E433"] # old electric bus types set
 
 C = ["c1"] # charging type set   # In the base case |C| = 1 -> c = 1 -> we just have one charging type -> In the random cases, so modified base cases -> we several c types
@@ -135,121 +137,81 @@ T_j = {
     "Stop4": ["Stop4"],
     "Stop5": ["Stop5"],
 } # set power station spots feasible for stop j
-dem_r = {
-} # passenger demand of route r = past passenger capacity of all route r vehicles
-
-
-
-# ROUTE INPUTS
-lt_r = {1: 6, 2: 18, 3: 18, 4: 4, 5: 4, 6: 13, 7: 9, 8: 9, 9: 36, 10: 13, 11: 9, 12: 18, 13: 9, 14: 9, 15: 18, 16: 18, 17: 9, 18: 13, 19: 9, 20: 6, 21: 18, 22: 9, 23: 9, 24: 9, 25: 18,26: 9}
-
-ut_r = {1: 7, 2: 20, 3: 20, 4: 5, 5: 5, 6: 15, 7: 10, 8: 10, 9: 40, 10: 15, 11: 10, 12: 20, 13: 10, 14: 10, 15: 20, 16: 20, 17: 10, 18: 15, 19: 10, 20: 7, 21: 20, 22: 10, 23: 10, 24: 10, 25: 20, 26: 10}
-
-pi_r = {
-    1: [1, 2, 1],
-    2: [1, 2, 3, 2, 1],
-    3: [1, 2, 4, 2, 1],
-    4: [1, 5, 1],
-    5: [1, 5, 6, 5, 1],
-    6: [1, 7, 1],
-    7: [1, 8, 9, 8, 1],
-    8: [9, 10, 11, 10, 9],
-    9: [10, 7, 10],
-    10: [10, 7, 10],
-    11: [12, 13, 12],
-    12: [14, 15, 14],
-    13: [14, 13, 14],
-    14: [15, 14, 11, 14, 15],
-    15: [14, 11, 14],
-    16: [14, 16, 14],
-    17: [10, 16, 10],
-    18: [14, 16, 14],
-    19: [14, 17, 14],
-    20: [18, 19, 18],
-    21: [18, 2, 20, 2, 18],
-    22: [14, 2, 21, 2, 14, 13, 14],
-    23: [22, 15, 22],
-    24: [15, 2, 23, 2, 15],
-    25: [15, 2, 23, 2, 15],
-    26: [18, 16, 18]
-} # route r cycle
 
 nv_rb_0 = {
-    1 : {"M103": 3, "M105": 2, "T420": 0, "T333": 0},
-    2 : {"M103": 0, "M105": 2, "T420": 0, "T333": 0},
-    3 : {"M103": 1, "M105": 2, "T420": 0, "T333": 0},
-    4 : {"M103": 0, "M105": 0, "T420": 2, "T333": 5},
-    5 : {"M103": 0, "M105": 0, "T420": 4, "T333": 6},
-    6 : {"M103": 5, "M105": 0, "T420": 0, "T333": 0},
-    7 : {"M103": 0, "M105": 0, "T420": 2, "T333": 5},
-    8 : {"M103": 0, "M105": 0, "T420": 3, "T333": 6},
-    9 : {"M103": 0, "M105": 2, "T420": 0, "T333": 0},
-    10 : {"M103": 0, "M105": 0, "T420": 2, "T333": 2},
-    11 : {"M103": 0, "M105": 0, "T420": 2, "T333": 0},
-    12 : {"M103": 1, "M105": 2, "T420": 0, "T333": 0},
-    13 : {"M103": 0, "M105": 0, "T420": 2, "T333": 0},
-    14 : {"M103": 0, "M105": 0, "T420": 2, "T333": 5},
-    15 : {"M103": 2, "M105": 2, "T420": 0, "T333": 0},
-    16 : {"M103": 3, "M105": 3, "T420": 0, "T333": 0},
-    17 : {"M103": 0, "M105": 0, "T420": 2, "T333": 4},
-    18 : {"M103": 0, "M105": 0, "T420": 1, "T333": 3},
-    19 : {"M103": 3, "M105": 6, "T420": 0, "T333": 0},
-    20 : {"M103": 3, "M105": 6, "T420": 0, "T333": 0},
-    21 : {"M103": 2, "M105": 5, "T420": 0, "T333": 0},
-    22 : {"M103": 5, "M105": 7, "T420": 0, "T333": 0},
-    23 : {"M103": 0, "M105": 0, "T420": 3, "T333": 0},
-    24 : {"M103": 2, "M105": 5, "T420": 0, "T333": 0},
-    25 : {"M103": 1, "M105": 2, "T420": 0, "T333": 0},
-    26 : {"M103": 0, "M105": 0, "T420": 6, "T333": 8},
-
+    "r1" : {"M103": 3, "M104": 2},
+    "r2" : {"M103": 2, "M104": 0},
+    "r3" : {"M103": 1, "M104": 2},
+    "r4" : {"M103": 1, "M104": 1},
 }
 
 nob_rb = {
-    1: {"E433": 4},
-    2: {"E433": 0},
-    2: {"E433": 0},
-    4: {"E433": 0},
-    5: {"E433": 0},
-    6: {"E433": 0},
-    7: {"E433": 0},
-    8: {"E433": 0},
-    9: {"E433": 0},
-    10: {"E433": 0},
-    11: {"E433": 6},
-    12: {"E433": 0},
-    13: {"E433": 4},
-    14: {"E433": 0},
-    15: {"E433": 0},
-    16: {"E433": 0},
-    17: {"E433": 0},
-    18: {"E433": 0},
-    19: {"E433": 0},
-    20: {"E433": 0},
-    21: {"E433": 0},
-    22: {"E433": 0},
-    23: {"E433": 0},
-    24: {"E433": 0},
-    25: {"E433": 0},
-    26: {"E433": 0},
+    "r1": {"E433": 0},
+    "r2": {"E433": 1},
+    "r3": {"E433": 2},
+    "r4": {"E433": 2},
 } # number of old b-type electric buses on route r
 
+dem_r = {}  # passenger demand of route r = past passenger capacity of all route r vehicles
+            
+# Calculate the passenger demand for each route
+for r in set(nv_rb_0.keys()).union(nob_rb.keys()):
+    dem = 0
+    # Add capacities from non-battery buses
+    for b, n in nv_rb_0.get(r, {}).items():
+        dem += cap_b.get(b, 0) * n
+
+    # Add capacities from old electric buses
+    for b, n in nob_rb.get(r, {}).items():
+        dem += cap_b.get(b, 0) * n
+
+    dem_r[r] = dem
+
+
+# ROUTE INPUTS
+lt_r = {
+    "r1": 6,
+    "r2": 18,
+    "r3": 18,
+    "r4": 4
+}
+
+ut_r = {
+    "r1": 7, 
+    "r2": 20, 
+    "r3": 20, 
+    "r4": 5
+}
+
+pi_r = {
+    "r1": ["stop1", "stop2", "stop1"],
+    "r2": ["stop4", "stop5", "stop2", "stop5", "stop4"],
+    "r3": ["stop5", "stop3", "stop2", "stop3", "stop5"],
+    "r4": ["stop2", "stop1", "stop2"]
+} # route r cycle
+
+d_r = {
+    "r1": "depot1",
+    "r2": "depot1",
+    "r3": "depot2",
+    "r4": "depot2"
+}
+
+
 n_rbc_data_2d = np.array([
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],  # E433
-    [2, 1, 1, 2, 2, 1, 0, 1, 1, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 0, 0, 0, 0],  # E420
-    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1],  # E321
-    [2, 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1],  # E490
-    [1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],  # 321D
-    [1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 0, 0, 0, 0],  # 420D
+    [1, 1, 1, 1],  # E433
+    [2, 1, 1, 2],  # E420
+    [2, 2, 2, 2],  # E302
 ])
 
-n_rbc_data = n_rbc_data_2d[:, :, np.newaxis] #just this case since we need also a c dimensione even if it is just 1
-
+# transpose to change the order of the axis and respect the roder of the inputs (r,b,c)
+n_rbc_data = n_rbc_data_2d[:, :, np.newaxis].transpose(1, 0, 2) #just this case since we need also a c dimensione even if it is just 1
 n_rbc = di.init_n_rbc(n_rbc_data, R, B, C) # Initialize n_rbc with data from data_inizialization module
 
 
 dem_0_r = {} # passenger capacity of route r to be satisfied by new electric buses and remaining non-battery vehicles
 for r in R:
-    dem_0_r[r] = dem_r[r] - gb.quicksum(nob_rb[r, b] * cap_b[b] for b in B_r[r])  ## calculating dem_0_r!
+    dem_0_r[r] = dem_r[r] - sum(nob_rb[r].get(b, 0) * cap_b[b] for b in B_r[r])  ## calculating dem_0_r!
 
 # we need to calculate it! -> ASK also this to the professor!!!!
 
