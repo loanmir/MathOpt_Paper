@@ -320,7 +320,12 @@ y_jrbc_s = ILP_Model.addVars([r for r in range(R)], [b for b in range(B_r[r])], 
 
 
 
-
+nod_jc = {
+    ("Depot1", "c1"): ,
+    ("Depot1", "c2"): ,
+    ("Depot1", "c1"): ,
+    ("Depot1", "c1"): ,
+}
 
 
 
