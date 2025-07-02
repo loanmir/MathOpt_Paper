@@ -247,18 +247,20 @@ y_bc = ILP_Model.addVars([(b, c) for b in B for c in C], vtype=gb.GRB.BINARY, na
 y_jrbc = ILP_Model.addVars([(j, r, b, c) for j in N for r in R for b in B for c in C], vtype=gb.GRB.BINARY, name="y_jrbc")
 
 #  Variables related to the charging equipment quantities
-ns_j = ILP_Model.addVars([j for j in range(N - NO)], vtype=gb.GRB.BINARY, name="ns_j") # constraint (57) already integrated here
-alpha_jc = ILP_Model.addVars([j for j in range(D - NO)], vtype=gb.GRB.BINARY, name="alpha_jc") # constraint (60) already integrated here
-nc_jc = ILP_Model.addVars([j for j in range(N)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="nc_jc")
-np_jc = ILP_Model.addVars([j for j in range(D - NO)], [c for c in range(C)], vtype=gb.GRB.INTEGER, name="np_jc") # constraint (56) already integrated here
+ns_j = ILP_Model.addVars([j for j in N if j not in NO], vtype=gb.GRB.BINARY, name="ns_j") # constraint (57) already integrated here
+alpha_jc = ILP_Model.addVars([j for j in D if j not in NO], vtype=gb.GRB.BINARY, name="alpha_jc") # constraint (60) already integrated here
+nc_jc = ILP_Model.addVars([(j, c) for j in N for c in C], vtype=gb.GRB.INTEGER, lb=0 ,name="nc_jc")
+np_jc = ILP_Model.addVars([j for j in D if j not in NO], [c for c in C], vtype=gb.GRB.INTEGER, lb=0, ub=1,name="np_jc") # constraint (56) already integrated here
 
 # Variables related to the allocation and links of power stations with the charging locations
-beta_t = ILP_Model.addVars([t for t in range(T - TO)], vtype=gb.GRB.BINARY, name="beta_t") # constraint (46) already integrated here
-gamma_tj = ILP_Model.addVars([t for t in range(T - TO)], vtype=gb.GRB.BINARY, name="gamma_tj")
+beta_t = ILP_Model.addVars([t for t in T if t not in TO], vtype=gb.GRB.BINARY, name="beta_t") # constraint (46) already integrated here
+gamma_tj = ILP_Model.addVars([t for t in T if t not in TO], vtype=gb.GRB.BINARY, name="gamma_tj")
 
 # Additional variables
 Z_r = ILP_Model.addVars([(r) for r in R], vtype=gb.GRB.INTEGER,lb=0, ub={(r): dem_r[r] for r in R}, name="Z_r") # constraint (49) integrated
 nv_rb = ILP_Model.addVars([r for r in range(R)], [b for b in range(V_r[r])], vtype=gb.GRB.INTEGER,lb=0, ub={(r, b): nv_rb_0[r, b] for r in range(R) for b in range(V_r[r])}, name="nv_rb") # constraint (51) integrated
+Z_r = ILP_Model.addVars([r for r in range(R)], vtype=gb.GRB.INTEGER,lb=0, ub={r: dem_r[r] for r in range(R)}, name="Z_r") # constraint (49) integrated
+nv_rb = ILP_Model.addVars([(r, b) for r in R for b in V_r[r]], vtype=gb.GRB.INTEGER,lb=0, ub={(r, b): nv_rb_0[r, b] for r in R for b in V_r[r]}, name="nv_rb") # constraint (51) integrated
 
 #--------------------------------------------------------------------------------------#
 
