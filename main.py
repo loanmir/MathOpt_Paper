@@ -64,11 +64,14 @@ capacities = [153, 87, 175, 130, 80] #starting from electric and then non batter
 cap_b = {node: cap for node, cap in zip(B + V, capacities)} # passenger capacity of respective bus-types              # ASK PROFESSOR!!!!! -> IMPLEMENTING WITH ARRAY OR WITH DICTIONARY!!!!!!!!!!!!!!!!!!!!!!!!!
 d_b_MAX = [15, 25, 20] # driving range of fully charged b_bus_types-type electric bus
 ct_rjbc = [6, 10, 13] # charging time of b_bus_types-type electric bus at c-type charging point of NON-DEPOT stop j of route r
-cbus_b = [400000, 500000, 350000] # b_bus_types-type electric bus capital cost (initial investment for buying bus)
-vcb_rb = [270000, 200000, 280000] # variable cost of b_bus_types-type electric bus on route r
+cbus_b = {"E403":400000, "E420":500000, "E302":350000} # b_bus_types-type electric bus capital cost (initial investment for buying bus)
+vcb_rb = {"r1":{"E403":270000, "E420":200000, "E302":280000},
+          "r2":{"E403":270000, "E420":200000, "E302":280000},
+          "r3":{"E403":270000, "E420":200000, "E302":280000},
+          "r4":{"E403":270000, "E420":200000, "E302":280000}} # variable cost of b_bus_types-type electric bus on route r
 
 
-# COST INPUTS
+# COST INPUTS (considered constant for all c types (one at the moment) and all j stops)
 ccp_c = 120000 # CAPITAL COST of one c-type charging point
 vcp_c = 4500 # VARIABLE COST of one c-type charging point
 ccc_j = 5000 # CAPITAL COST of one charger at stop j
@@ -81,7 +84,7 @@ cc_uoc_pairs = [            # pairs for cc = capital cost upper limit (used in (
     (2e7, 1e7),
 ]
 
-csta_j = 100000 # capital cost of a recharging station at stop j
+csta_j = 100000 # capital cost of a recharging station at stop j (considered constant for all j)
 
 B_r = {
     "r1": ["E433", "E420", "E302"],
@@ -217,6 +220,10 @@ for r in R:
 
 # we need to calculate it! -> ASK also this to the professor!!!!
 
+#__________________________________________________________________________________________________________________
+#                ub_rb needs to be updated to have {r: {b1:value1, b2:value2, ...}}
+#__________________________________________________________________________________________________________________
+
 ub_rb = {
     # (1, 'busA'): 3,
 } # upper bound on the number of new b-type electric buses
@@ -258,7 +265,7 @@ gamma_tj = ILP_Model.addVars([t for t in T if t not in TO], vtype=gb.GRB.BINARY,
 
 # Additional variables
 Z_r = ILP_Model.addVars([(r) for r in R], vtype=gb.GRB.INTEGER,lb=0, ub={(r): dem_r[r] for r in R}, name="Z_r") # constraint (49) integrated
-nv_rb = ILP_Model.addVars([r for r in range(R)], [b for b in range(V_r[r])], vtype=gb.GRB.INTEGER,lb=0, ub={(r, b): nv_rb_0[r, b] for r in range(R) for b in range(V_r[r])}, name="nv_rb") # constraint (51) integrated
+nv_rb = ILP_Model.addVars([(r,b) for r in R for b in V_r[r]], vtype=gb.GRB.INTEGER,lb=0, ub={(r, b): nv_rb_0[r][b] for r in R for b in V_r[r]}, name="nv_rb") # constraint (51) integrated
 
 #--------------------------------------------------------------------------------------#
 
@@ -266,31 +273,22 @@ nv_rb = ILP_Model.addVars([r for r in range(R)], [b for b in range(V_r[r])], vty
 #-------------------------------- Constraints variables--------------------------------#
 
 # from (1) to (10)
-y_rbco_b = ILP_Model.addVars([r for r in range(R)], [b for b in range(B)], [c for c in range[co_b]], vtype=gb.GRB.BINARY, name="y_rbco_b")
+y_rbco_b = ILP_Model.addVars([(r,b,c) for r in R for b in B for c in co_b], vtype=gb.GRB.BINARY, name="y_rbco_b")
 
 # from (31) to (42)
-eta_jrc_1 = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="eta_jrc_1")
-eta_jrc_2 = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="eta_jrc_2")
-xi_jrc = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="xi_jrc")
-xi_jrcb = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [c for c in range(C)], [b for b in range(B)], vtype=gb.GRB.BINARY, name="xi_jrcb")
+eta_jrc_1 = ILP_Model.addVars([(j,r,c) for j in N for r in R for c in C], vtype=gb.GRB.BINARY, name="eta_jrc_1")
+eta_jrc_2 = ILP_Model.addVars([(j,r,c) for j in N for r in R for c in C], vtype=gb.GRB.BINARY, name="eta_jrc_2")
+xi_jrc = ILP_Model.addVars([(j,r,c) for j in N for r in R for c in C], vtype=gb.GRB.BINARY, name="xi_jrc")
+xi_jrcb = ILP_Model.addVars([(j,r,c,b) for j in N for r in R for c in C for b in B], vtype=gb.GRB.BINARY, name="xi_jrcb")
 
-nc_jrc = ILP_Model.addVars([r for r in range(R)], [j for j in pi_r[r]], [c for c in range(C)], vtype=gb.GRB.INTEGER, lb=0, ub=lambda idx: min(up[idx] * uc[idx[2]], nc_jrc_max[idx]), name="nc_jrc") # constraint (63) integrated here
-nc_jrc_b = ILP_Model.addVars([r for r in range(R)], [j for j in pi_r[r]], [c for c in range(C)], [b for b in B_r[r]] ,vtype=gb.GRB.INTEGER, lb=0, name="nc_jrc_b")
-nc_jrc_ct = ILP_Model.addVars([r for r in range(R)], [j for j in pi_r[r]], [c for c in range(C)], vtype=gb.GRB.INTEGER, lb=0, ub={(j, r, c): nc_jrc_max[j, r, c] for r in range(R) for j in range(pi_r[r]) for c in range(C)}, name="nc_jrc_ct")
+nc_jrc = ILP_Model.addVars([(j,r,c) for r in R for j in pi_r[r] for c in C], vtype=gb.GRB.INTEGER, ) 
+nc_jrc_b = ILP_Model.addVars([(j,r,c) for r in R for j in pi_r[r] for c in C] ,vtype=gb.GRB.INTEGER, name="nc_jrc_b")
+nc_jrc_ct = ILP_Model.addVars([(j,r,c) for r in R for j in pi_r[r] for c in C], vtype=gb.GRB.INTEGER, name="nc_jrc_ct")
 # constraint (61) already integrated here
 
 # from (43) to (44)
-y_jrbc_s = ILP_Model.addVars([r for r in range(R)], [b for b in range(B_r[r])], [j for j in range(pi_r[r])], [c for c in range(C_b[b])], [s for s in range(1, n_rbc[(r, b, c)] + 1)], vtype=gb.GRB.BINARY, name="y_jrbc_s")
+y_jrbc_s = ILP_Model.addVars([(j,r,b,c,s) for r in R for b in B_r[r] for j in pi_r[r] for c in C_b[b] for s in range(1, n_rbc[(r, b, c)] + 1)], vtype=gb.GRB.BINARY, name="y_jrbc_s")
 
-
-
-
-nod_jc = {
-    ("Depot1", "c1"): ,
-    ("Depot1", "c2"): ,
-    ("Depot1", "c1"): ,
-    ("Depot1", "c1"): ,
-}
 
 
 
@@ -298,7 +296,7 @@ nod_jc = {
 #-------------------------------- Objective function -----------------------------------#
 
 ILP_Model.setObjective(
-    (gb.quicksum(Z_r[r] - gb.quicksum(nv_rb[r, b] * cap_b[b] for b in V_r[r]) / dem_r[r] for r in R)) -
+    (gb.quicksum((Z_r[r] - gb.quicksum(nv_rb[r, b] * cap_b[b] for b in V_r[r]) / dem_r[r]) for r in R)) -
     (gb.quicksum(gb.quicksum(nc_jc[j, c] for c in C) for j in N) / (len(N) * gb.quicksum(uc_c[c] for c in C))) -
     (gb.quicksum(gb.quicksum(np_jc[j, c] for c in C) for j in N) / (gb.quicksum(up_j[j] for j in N))) -
     (gb.quicksum(beta_t[t] for t in T - TO) / (len(T))) - 
@@ -313,38 +311,29 @@ ILP_Model.setObjective(
 # (2)
 for cc, uoc in cc_uoc_pairs:
     ILP_Model.addConstr(
-        (gb.quicksum(csta_j[j] * ns_j[j] for j in N) +
-        gb.quicksum(ccp_c[c] * np_jc[j, c] for j in N for c in C) +
+        (gb.quicksum(csta_j * ns_j[j] for j in N) +
+        gb.quicksum(ccp_c * np_jc[j, c] for j in N for c in C) +
         gb.quicksum(gb.quicksum (cbus_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b[b]) for b in B_r[r]) for r in R) +
-        gb.quicksum(ccps_t[t] * beta_t[t] for t in range(T - TO)) +
-        gb.quicksum(gb.quicksum(cl_tj[t, j] * gamma_tj[t, j] for j in range(N - NO)) for t in range(T - TO))
+        gb.quicksum(ccps_t * beta_t[t] for t in T if t not in TO) +
+        gb.quicksum(gb.quicksum(cl_tj * gamma_tj[t, j] for j in N if j not in NO) for t in T if t not in TO)
         <= cc),
         name="capital_cost_constraint"
-)
+    )
 
 
 # (3)
 
 for cc, uoc in cc_uoc_pairs:
     ILP_Model.addConstr(
-        (gb.quicksum(csta_j[j] * ns_j[j] for j in N) +
-        gb.quicksum(ccp_c[c] * np_jc[j, c] for j in N for c in C) +
+        (gb.quicksum(csta_j * ns_j[j] for j in N) +
+        gb.quicksum(ccp_c * np_jc[j, c] for j in N for c in C) +
         gb.quicksum(gb.quicksum (cbus_b[b] * gb.quicksum(nb_rbc[r, b, c] for c in C_b[b]) for b in B_r[r]) for r in R) +
-        gb.quicksum(ccps_t[t] * beta_t[t] for t in T-TO) +
-        gb.quicksum(vcc_j[j] * ns_j[j] + gb.quicksum(vcp_c[c] * np_jc[j, c] for c in C) for j in N) +
-        gb.quicksum(gb.quicksum(vcb_rb[r, b] for b in B_r[r]) for r in R)
+        gb.quicksum(ccps_t * beta_t[t] for t in T if t not in TO) +
+        gb.quicksum(vcc_j * ns_j[j] + gb.quicksum(vcp_c * np_jc[j, c] for c in C) for j in N) +
+        gb.quicksum(gb.quicksum(vcb_rb[r][b] for b in B_r[r]) for r in R)
         <= uoc),
         name="variable_cost_constraint"
 )
-
-'''
-ILP_Model.addConstr(
-    gb.quicksum(vcc[j] * ns[j] + gb.quicksum(vcp[c] * np[j, c] for c in C) for j in N) +
-    gb.quicksum(vcb[r, b] for r in R for b in B[r])
-    <= uoc,
-    name="capacity_constraint"
-)
-'''
 
 # (4)
 for j in N:
@@ -819,7 +808,7 @@ for j in D - NO:
 
 # (61)
 # Implemented directly in the variable declaration!
-'''
+
 for r in R:
     for j in pi_r[r]:
         for c in C: 
@@ -831,24 +820,23 @@ for r in R:
             nc_jrc_ct[j, r, c] <= nc_jrc_max[j, r, c],          # nc_jrc_max = math.ceil((max{ct_jrbc for b in B_rc})/ lt_r)    !!!!!
             name=f"Constraint_61_b_{j}_{r}_{c}"
         )
-'''
+
 # (62)
 for r in R:
     for j in pi_r[r]:
         for c in C:
-            '''ILP_Model.addConstr(
-            nc_jrc_b[j, r, c] >= 0,                                 Already added lower bound in variable declaration!
-            name=f"Constraint_62_a_{j}_{r}_{c}"
-        )'''
             ILP_Model.addConstr(
-            nc_jrc_b[j, r, c] <= gb.quicksum(ub_rb[r, b] + nob_rb[r, b] for b in B_r[r]),
+            nc_jrc_b[j, r, c] >= 0,                                 # Already added lower bound in variable declaration!
+            name=f"Constraint_62_a_{j}_{r}_{c}"
+        )
+            ILP_Model.addConstr(
+            nc_jrc_b[j, r, c] <= gb.quicksum(ub_rb[r, b] + nob_rb[r][b] for b in B_r[r]),
             name=f"Constraint_62_b_{j}_{r}_{c}"
         )
 
 # (63)
-# Implemented directly in the variable declaration!
+# constraint (63) to be integrated here
 
-'''
 for r in R:
     for j in pi_r[r]:
         for c in C:
@@ -860,7 +848,7 @@ for r in R:
             nc_jrc[j, r, c] <= min(up_j[j] * uc_c[c], nc_jrc_max[j, r, c]),             # nc_jrc_max = math.ceil((max{ct_jrbc for b in B_rc})/ lt_r)    !!!!!
             name=f"Constraint_63_b_{j}_{r}_{c}"
         )
-'''
+
 # (64)
 # Implemented directly in the variable declaration! -> BUT ERROR IN CODE! (NOT SURE)
 
