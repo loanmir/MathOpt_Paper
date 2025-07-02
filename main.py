@@ -259,8 +259,6 @@ gamma_tj = ILP_Model.addVars([t for t in T if t not in TO], vtype=gb.GRB.BINARY,
 # Additional variables
 Z_r = ILP_Model.addVars([(r) for r in R], vtype=gb.GRB.INTEGER,lb=0, ub={(r): dem_r[r] for r in R}, name="Z_r") # constraint (49) integrated
 nv_rb = ILP_Model.addVars([r for r in range(R)], [b for b in range(V_r[r])], vtype=gb.GRB.INTEGER,lb=0, ub={(r, b): nv_rb_0[r, b] for r in range(R) for b in range(V_r[r])}, name="nv_rb") # constraint (51) integrated
-Z_r = ILP_Model.addVars([r for r in range(R)], vtype=gb.GRB.INTEGER,lb=0, ub={r: dem_r[r] for r in range(R)}, name="Z_r") # constraint (49) integrated
-nv_rb = ILP_Model.addVars([(r, b) for r in R for b in V_r[r]], vtype=gb.GRB.INTEGER,lb=0, ub={(r, b): nv_rb_0[r, b] for r in R for b in V_r[r]}, name="nv_rb") # constraint (51) integrated
 
 #--------------------------------------------------------------------------------------#
 
