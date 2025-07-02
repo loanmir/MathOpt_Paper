@@ -236,15 +236,15 @@ for r in R:
 #-------------------------------- MAIN decision variables------------------------------#
 
 # Quantity of new buses variables
-nb_rbc = ILP_Model.addVars([r for r in range(R)], [b for b in range(B_r[r])], [c for c in range(C_b[b])], vtype=gb.GRB.INTEGER, lb=0, ub={(r,b): ub_rb[r, b] for r in range(r) for b in range(B_r)}, name="nb_rbc") # constraint (50) integrated
-y_rbc = ILP_Model.addVars([r for r in range(R)], [b for b in range(B_r[r])], [c for c in range(C_b[b])], vtype=gb.GRB.BINARY, name="y_rbc") # constraint (59) already integrated here
-y_r = ILP_Model.addVars([r for r in range(R)], vtype=gb.GRB.BINARY, name="y_r") # constraint (52) already integrated here
-y_rb = ILP_Model.addVars([r for r in range(R)], [b for b in range(B_r[r])] , vtype=gb.GRB.BINARY, name="y_rb") # constraint (58) already integrated here
+nb_rbc = ILP_Model.addVars([(r, b, c) for r in R for b in B_r[r] for c in C_b[b]], vtype=gb.GRB.INTEGER, lb=0, ub={(r,b,c): ub_rb[r, b] for r in R for b in B_r[r] for c in C_b[b]}, name="nb_rbc") # constraint (50) integrated
+y_rbc = ILP_Model.addVars([(r, b, c) for r in R for b in B_r[r] for c in C_b[b]], vtype=gb.GRB.BINARY, name="y_rbc") # constraint (59) already integrated here
+y_r = ILP_Model.addVars([(r) for r in R], vtype=gb.GRB.BINARY, name="y_r") # constraint (52) already integrated here
+y_rb = ILP_Model.addVars([(r, b) for r in R for b in B_r[r]] , vtype=gb.GRB.BINARY, name="y_rb") # constraint (58) already integrated here
 
 # Variables related to the assignment of electric buses for charging
-y_rbc_s = ILP_Model.addVars([r for r in range(R)], [b for b in B_r[r]], [c for c in C_b[b]], [s for s in range(1, n_rbc[(r, b, c)] + 1)], vtype=gb.GRB.BINARY, name="y_rbc_s")  ## URROR IN c !!!!
-y_bc = ILP_Model.addVars([b for b in range(B)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="y_bc")
-y_jrbc = ILP_Model.addVars([j for j in range(N)], [r for r in range(R)], [b for b in range(B)], [c for c in range(C)], vtype=gb.GRB.BINARY, name="y_jrbc")
+y_rbc_s = ILP_Model.addVars([(r, b, c, s) for r in R for b in B_r[r] for c in C_b[b] for s in range(1, n_rbc[(r, b, c)] + 1)], vtype=gb.GRB.BINARY, name="y_rbc_s")  ## URROR IN c !!!!
+y_bc = ILP_Model.addVars([(b, c) for b in B for c in C], vtype=gb.GRB.BINARY, name="y_bc")
+y_jrbc = ILP_Model.addVars([(j, r, b, c) for j in N for r in R for b in B for c in C], vtype=gb.GRB.BINARY, name="y_jrbc")
 
 #  Variables related to the charging equipment quantities
 ns_j = ILP_Model.addVars([j for j in range(N - NO)], vtype=gb.GRB.BINARY, name="ns_j") # constraint (57) already integrated here
