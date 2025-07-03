@@ -40,6 +40,7 @@ R = ["r1","r2","r3","r4"] # route set
 D = [n for n, attr in G.nodes(data=True) if attr.get('type') == 'depot'] # depot set
 
 N = list(G.nodes) # feasible charging stop set
+# ['Depot1', 'Depot2', 'Stop1', 'Stop2', 'Stop3', 'Stop4', 'Stop5']
 NO = [stop for stop in N if G.nodes[stop].get("charging_possible", True)] # set of old charger stops
 
 T = [stop for stop in N] # power station spot set (considering only one spot for each stop)
@@ -50,13 +51,13 @@ TO = ["Depot1", "Stop1", "Stop3", "Stop5"]# old power station spot set
 
 V = ["M103", "M104"] # non battery vehicle type set
 
-RO = [] # old electric bus routes set
+#RO = [] # old electric bus routes set
 
 B = ["E433", "E420", "E302"] # electric bus-type
 BO = ["E433"] # old electric bus types set
 
 C = ["c1"] # charging type set   # In the base case |C| = 1 -> c = 1 -> we just have one charging type -> In the random cases, so modified base cases -> we several c types
-S_rbc_s = []   # Look how to implement this
+#S_rbc_s = []   # Look how to implement this
 
 # BUS INPUTS
 capacities = [153, 87, 175, 130, 80] #starting from electric and then non battery vehicles
@@ -109,7 +110,7 @@ C_b = {
 } # feasible charging type set for b-type electric buses
 
 B_rc = {
-    "r1": {"c1": ["E433", "E420", "E302"], },
+    "r1": {"c1": ["E433", "E420", "E302"]},
     "r2": {"c1": ["E433"]},
     "r3": {"c1": ["E420", "E302"]},
     "r4": {"c1": ["E433", "E420"]},                        # Also here we have one single charger type
@@ -128,6 +129,31 @@ nod_jc["Depot1", "c1"] = 2
 nod_jc["Stop1", "c1"] = 1
 nod_jc["Stop3", "c1"] = 3
 nod_jc["Stop5", "c1"] = 1
+
+nop_jc = {
+    (j, c): 0 for j in N if G.nodes[j] and G.nodes[j] for c in C                # same as nod_jc, since one charging point can have exactly one plug device!
+}
+nop_jc["Depot1", "c1"] = 2
+nop_jc["Stop1", "c1"] = 1
+nop_jc["Stop3", "c1"] = 3
+nop_jc["Stop5", "c1"] = 1
+
+# upper limit on the number of charging points
+up_j = {
+    (j): 0 for j in N if G.nodes[j]                     # TAKE A LOOK HERE FOR THE VALUES
+}
+up_j["Depot1"] = 4
+up_j["Depot2"] = 5
+up_j["Stop1"] = 2
+up_j["Stop2"] = 1
+up_j["Stop2"] = 3
+up_j["Stop3"] = 3
+up_j["Stop4"] = 1
+up_j["Stop5"] = 4
+
+S
+
+uc_c = 5 # Constant because we have just one type!!!  TAKE A LOOK
 
 p_c = 260 # output power of one c-type plug device              ### ASK PROFESOR IF IT IS CONSTANT for all c or it CHANGES -> IN PAPER IS CONSTANT
 utp_t = 800 # output power of a power station at spot t ∈ T
