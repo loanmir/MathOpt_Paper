@@ -251,13 +251,14 @@ for r in R:
 #__________________________________________________________________________________________________________________
 
 ub_rb = {
-    # (1, 'busA'): 3,
+    # {1: {'busA': 3}},
 } # upper bound on the number of new b-type electric buses
 for r in R:
+    ub_rb[r] = {}  # Initialize ub_rb for each route r
     for b in B_r[r]: # assuming B_r[r] gives buses relevant to route r            ## calculating ub_rb
         numerator = dem_0_r[r]
         denominator = cap_b[b]
-        ub_rb[r, b] = math.ceil(numerator/denominator)
+        ub_rb[r][b] = math.ceil(numerator/denominator)
 
 
 
@@ -483,7 +484,7 @@ for r in R:
     for b in B_r[r]:
         for c in C_b[b]:
             ILP_Model.addConstr(
-                nb_rbc[r, b, c] <= ub_rb[r, b] * y_rbc[r, b, c],        # here we should write ub_rb[r][b]
+                nb_rbc[r, b, c] <= ub_rb[r][b] * y_rbc[r, b, c],        # here we should write ub_rb[r][b]
                 name=f"Constraint_18_{r}_{b}_{c}"
             )
 
