@@ -142,16 +142,16 @@ nop_jc["Stop5", "c1"] = 1
 up_j = {
     (j): 0 for j in N if G.nodes[j]                     # TAKE A LOOK HERE FOR THE VALUES
 }
-up_j["Depot1"] = 4
-up_j["Depot2"] = 5
-up_j["Stop1"] = 2
-up_j["Stop2"] = 1
+up_j["Depot1"] = 3
+up_j["Depot2"] = 3
+up_j["Stop1"] = 3
+up_j["Stop2"] = 3
 up_j["Stop2"] = 3
 up_j["Stop3"] = 3
-up_j["Stop4"] = 1
-up_j["Stop5"] = 4
+up_j["Stop4"] = 3
+up_j["Stop5"] = 3
 
-S
+
 
 uc_c = 5 # Constant because we have just one type!!!  TAKE A LOOK
 
@@ -422,11 +422,12 @@ for j in N:
     )
 
 # (11)
-for j in (j for j in D if j not in NO):                                 # for j in D - NO
-    ILP_Model.addConstr(
-        alpha_jc[j, c] - np_jc[j, c] <= 0,       # take a look at this again - There is no c loop!!!
-        name=f"Constraint_11_{j}_{c}"
-    )
+for j in (j for j in D if j not in NO):         # for j in D - NO
+    for c in C:
+        ILP_Model.addConstr(
+            alpha_jc[j, c] - np_jc[j, c] <= 0,       # take a look at this again - There is no c loop!!!
+            name=f"Constraint_11_{j}_{c}"
+        )
 
 # (12)
 for r in R:
@@ -562,7 +563,7 @@ for j in (j for j in D if j not in NO):
 # (28)
 for r in R:
     ILP_Model.addConstr(
-        L_r[r] * y_r[r] <= ut_r[r] * gb.quicksum(gb.quicksum(nb_rbc[r, b, c] + nob_rb[r, b] for c in C_b[b]) for b in B_r[r]) +
+        L_r[r] * y_r[r] <= ut_r[r] * gb.quicksum(gb.quicksum(nb_rbc[r, b, c] + nob_rb[r][b] for c in C_b[b]) for b in B_r[r]) +
         ut_r[r] * gb.quicksum(nv_rb[r, b] for b in V_r[r]),
         name=f"Constraint_28_{r}"
     )
@@ -570,7 +571,7 @@ for r in R:
 # (29)
 for r in R:
     ILP_Model.addConstr(
-        L_r[r] * y_r[r] >= lt_r[r] * gb.quicksum(gb.quicksum(nb_rbc[r, b, c] + nob_rb[r, b] for c in C_b[b]) for b in B_r[r]) +
+        L_r[r] * y_r[r] >= lt_r[r] * gb.quicksum(gb.quicksum(nb_rbc[r, b, c] + nob_rb[r][b] for c in C_b[b]) for b in B_r[r]) +
         lt_r[r] * gb.quicksum(nv_rb[r, b] for b in V_r[r]),
         name=f"Constraint_29_{r}"
     )
@@ -582,8 +583,6 @@ for j in (j for j in D if j not in NO):                 # for j in D - NO
             uc_c * alpha_jc[j, c] - nc_jc[j, c] <= 0,
             name=f"Constraint_30_{j}_{c}"
         )
-
-    ### uc_c is an input variable!
 
 # (31)
 for j in (j for j in N if j not in D):
@@ -598,7 +597,7 @@ for j in (j for j in N if j not in D):                  # for j in N - D
         for c in C:
             for r in R_jc[j,c]:
                 ILP_Model.addConstr(
-                nc_jrc_b[j, r, c] == gb.quicksum(nb_rbc[r, b, c] + nob_rbc[r, b, c] for b in B_rc[r, c]),
+                nc_jrc_b[j, r, c] == gb.quicksum(nb_rbc[r, b, c] + nob_rbc[r, b, c] for b in B_rc[r][c]),
                 name=f"Constraint_32_{j}_{r}_{c}"
             )
 
@@ -651,7 +650,7 @@ for j in (j for j in N if j not in D):
 for j in (j for j in N if j not in D):
         for c in C:
             for r in R_jc[j,c]:
-                for b in B_rc[r, c]:
+                for b in B_rc[r][c]:
                     ILP_Model.addConstr(
                     nc_jrc_ct[j, r, c] >= (ct_rjbc[r, j, b, c] * y_jrbc[j, r, b, c])/lt_r[r],
                     name=f"Constraint_38_{j}_{r}_{c}_{b}"
@@ -661,7 +660,7 @@ for j in (j for j in N if j not in D):
 for j in (j for j in N if j not in D):
         for c in C:
             for r in R_jc[j,c]:
-                for b in B_rc[r, c]:
+                for b in B_rc[r][c]:
                     nc_jrc_ct[j, r, c] <= ((ct_rjbc[r, j, b, c] * y_jrbc[j, r, b, c]) / lt_r[r])  + nc_jcr_max[j, c, r] (1 - xi_jrcb[j, r, b, c]),
                     name=f"Constraint_39_{j}_{r}_{c}_{b}"
                                                             # noc_jrc_ct = (max{ct_jrbc for b in BO_rc}) / lt_r          !!!!!
@@ -671,7 +670,7 @@ for j in (j for j in N if j not in D):
 for j in (j for j in N if j not in D):
         for c in C:
             for r in R_jc[j, c]:
-                for b in B_rc[r, c]:
+                for b in B_rc[r][c]:
                     ILP_Model.addConstr(
                         nc_jrc_ct[j, r, c] >= noc_jrc_ct[j, r, c],
                         name=f"Constraint_40_{j}_{r}_{c}_{b}"
@@ -681,7 +680,7 @@ for j in (j for j in N if j not in D):
 for j in (j for j in N if j not in D):
         for c in C:
             for r in R_jc[j, c]:
-                for b in B_rc[r, c]:
+                for b in B_rc[r][c]:
                     ILP_Model.addConstr(
                         nc_jrc_ct[j, r, c] <= noc_jrc_ct[j, r, c] + nc_jrc_max[j, r, c] * (1 - xi_jrc[j, r, c]),
                         name=f"Constraint_41_{j}_{r}_{c}_{b}"
@@ -692,7 +691,7 @@ for j in (j for j in N if j not in D):
         for c in C:
             for r in R_jc[j, c]:
                 ILP_Model.addConstr(
-                    xi_jrc[j, r, c] + gb.quicksum(xi_jrcb for b in B_rc[r, c]) == 1,
+                    xi_jrc[j, r, c] + gb.quicksum(xi_jrcb[j, r, c, b] for b in B_rc[r][c]) == 1,
                     name=f"Constraint_42_{j}_{c}_{r}"
                 )
 
@@ -862,7 +861,7 @@ for r in R:
             name=f"Constraint_62_a_{j}_{r}_{c}"
         )
             ILP_Model.addConstr(
-            nc_jrc_b[j, r, c] <= gb.quicksum(ub_rb[r, b] + nob_rb[r][b] for b in B_r[r]),
+            nc_jrc_b[j, r, c] <= gb.quicksum(ub_rb[r][b] + nob_rb[r][b] for b in B_r[r]),
             name=f"Constraint_62_b_{j}_{r}_{c}"
         )
 
