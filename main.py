@@ -75,9 +75,6 @@ ct_rjbc = { "r1":{  "stop1":{"E433":{"c1":6}, "E420":{"c1":10}, "E302":{"c1":13}
             "r4":{  "stop1":{"E433":{"c1":6}, "E420":{"c1":10}},
                     "stop2":{"E433":{"c1":6}, "E420":{"c1":10}}}
             }
-    
-    
-    6, 10, 13 # charging time of b_bus_types-type electric bus at c-type charging point of NON-DEPOT stop j of route r
 
 
 cbus_b = {"E403":400000, "E420":500000, "E302":350000} # b_bus_types-type electric bus capital cost (initial investment for buying bus)
