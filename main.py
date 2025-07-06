@@ -381,7 +381,7 @@ for t in T:
 
 # (6)
 for r in R:
-    for b in (bus for bus in BO if bus in B_r[r]):                   #  for b in BO & B_r[r]
+    for b in (bus for bus in BO if bus in B_r[r]):                   # for b in BO & B_r[r]
         ILP_Model.addConstr(
             gb.quicksum(y_rbc[r, b, c] - y_rbco_b[r, b, co_b[b]] for c in C_b[b]) <= 0,
             name=f"Constraint_6_{r}_{b}"
