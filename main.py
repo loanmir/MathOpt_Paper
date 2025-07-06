@@ -64,7 +64,22 @@ capacities = [153, 87, 175, 130, 80] #starting from electric and then non batter
 
 cap_b = {node: cap for node, cap in zip(B + V, capacities)} # passenger capacity of respective bus-types              # ASK PROFESSOR!!!!! -> IMPLEMENTING WITH ARRAY OR WITH DICTIONARY!!!!!!!!!!!!!!!!!!!!!!!!!
 d_b_MAX = [15, 25, 20] # driving range of fully charged b_bus_types-type electric bus
-ct_rjbc = [6, 10, 13] # charging time of b_bus_types-type electric bus at c-type charging point of NON-DEPOT stop j of route r
+ct_rjbc = { "r1":{  "stop1":{"E433":{"c1":6}, "E420":{"c1":10}, "E302":{"c1":13}},
+                    "stop2":{"E433":{"c1":6}, "E420":{"c1":10}, "E302":{"c1":13}}},
+            "r2":{  "stop2":{"E433":{"c1":6}},
+                    "stop4":{"E433":{"c1":6}},
+                    "stop5":{"E433":{"c1":6}}},
+            "r3":{  "stop2":{"E420":{"c1":10}, "E302":{"c1":13}},
+                    "stop3":{"E420":{"c1":10}, "E302":{"c1":13}},
+                    "stop5":{"E420":{"c1":10}, "E302":{"c1":13}}},
+            "r4":{  "stop1":{"E433":{"c1":6}, "E420":{"c1":10}},
+                    "stop2":{"E433":{"c1":6}, "E420":{"c1":10}}}
+            }
+    
+    
+    6, 10, 13 # charging time of b_bus_types-type electric bus at c-type charging point of NON-DEPOT stop j of route r
+
+
 cbus_b = {"E403":400000, "E420":500000, "E302":350000} # b_bus_types-type electric bus capital cost (initial investment for buying bus)
 vcb_rb = {"r1":{"E403":270000, "E420":200000, "E302":280000},
           "r2":{"E403":270000, "E420":200000, "E302":280000},
