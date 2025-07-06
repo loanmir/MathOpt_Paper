@@ -673,11 +673,15 @@ for j in (j for j in N if j not in D):
         for c in C:
             for r in R_jc[j,c]:
                 for b in B_rc[r][c]:
-                    nc_jrc_ct[j, r, c] <= ((ct_rjbc[r, j, b, c] * y_jrbc[j, r, b, c]) / lt_r[r])  + nc_jcr_max[j, c, r] (1 - xi_jrcb[j, r, b, c]),
-                    name=f"Constraint_39_{j}_{r}_{c}_{b}"
-                                                            # noc_jrc_ct = (max{ct_jrbc for b in BO_rc}) / lt_r          !!!!!
+                    ILP_Model.addConstr(
+                        nc_jrc_ct[j, r, c] <= ((ct_rjbc[r, j, b, c] * y_jrbc[j, r, b, c]) / lt_r[r]) + nc_jcr_max[
+                            j, c, r](1 - xi_jrcb[j, r, b, c]),
+                        name=f"Constraint_39_{j}_{r}_{c}_{b}"
+                    )
 
-                                                            # nc_jrc_max = math.ceil((max{ct_jrbc for b in B_rc})/ lt_r)    !!!!!
+# noc_jrc_ct = (max{ct_jrbc for b in BO_rc}) / lt_r
+# nc_jrc_max = math.ceil((max{ct_jrbc for b in B_rc})/ lt_r)
+
 # (40)
 for j in (j for j in N if j not in D):
         for c in C:
