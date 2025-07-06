@@ -289,7 +289,7 @@ y_r = ILP_Model.addVars([(r) for r in R], vtype=gb.GRB.BINARY, name="y_r") # con
 y_rb = ILP_Model.addVars([(r, b) for r in R for b in B_r[r]] , vtype=gb.GRB.BINARY, name="y_rb") # constraint (58) already integrated here
 
 # Variables related to the assignment of electric buses for charging
-y_rbc_s = ILP_Model.addVars([(r, b, c, s) for r in R for b in B_r[r] for c in C_b[b] for s in range(1, n_rbc[(r, b, c)] + 1)], vtype=gb.GRB.BINARY, name="y_rbc_s")  ## URROR IN c !!!!
+y_rbc_s = ILP_Model.addVars([(r, b, c, s) for r in R for b in B_r[r] for c in C_b[b] for s in range(1, n_rbc[(r, b, c)] + 1)], vtype=gb.GRB.BINARY, name="y_rbc_s")
 y_bc = ILP_Model.addVars([(b, c) for b in B for c in C], vtype=gb.GRB.BINARY, name="y_bc")
 y_jrbc = ILP_Model.addVars([(j, r, b, c) for j in N for r in R for b in B for c in C], vtype=gb.GRB.BINARY, name="y_jrbc")
 
@@ -665,7 +665,7 @@ for j in (j for j in N if j not in D):
             for r in R_jc[j,c]:
                 for b in B_rc[r][c]:
                     ILP_Model.addConstr(
-                    nc_jrc_ct[j, r, c] >= (ct_rjbc[r, j, b, c] * y_jrbc[j, r, b, c])/lt_r[r],
+                    nc_jrc_ct[j, r, c] >= (ct_rjbc[r][j][b][c] * y_jrbc[j, r, b, c])/lt_r[r],
                     name=f"Constraint_38_{j}_{r}_{c}_{b}"
                 )
 
@@ -675,12 +675,11 @@ for j in (j for j in N if j not in D):
             for r in R_jc[j,c]:
                 for b in B_rc[r][c]:
                     ILP_Model.addConstr(
-                        nc_jrc_ct[j, r, c] <= ((ct_rjbc[r, j, b, c] * y_jrbc[j, r, b, c]) / lt_r[r]) + nc_jcr_max[
-                            j, c, r](1 - xi_jrcb[j, r, b, c]),
+                        nc_jrc_ct[j, r, c] <= ((ct_rjbc[r][j][b][c] * y_jrbc[j, r, b, c]) / lt_r[r]) + nc_jcr_max[j, c, r](1 - xi_jrcb[j, r, b, c]),
                         name=f"Constraint_39_{j}_{r}_{c}_{b}"
                     )
 
-# noc_jrc_ct = (max{ct_jrbc for b in BO_rc}) / lt_r
+# noc_jrc_ct = (max{ct_rjbc for b in BO_rc}) / lt_r
 # nc_jrc_max = math.ceil((max{ct_jrbc for b in B_rc})/ lt_r)
 
 # (40)
@@ -898,7 +897,7 @@ for r in R:
         )
 
 # (64)
-# Implemented directly in the variable declaration! -> BUT ERROR IN CODE! (NOT SURE)
+# Implemented directly in the variable declaration!
 
 # (65)
 for r in R:
@@ -910,7 +909,7 @@ for r in R:
                         ILP_Model.addConstr(y_jrbc_s[j,r,b,c,s] == 0, name=f"jrbc_zero_r{r}_b{b}_c{c}_j{j}_s{s}")
 
 # (66)
-# Implemented directly in the variable declaration! -> BUT ERROR IN CODE! (NOT SURE)
+# Implemented directly in the variable declaration!
 
 
 ILP_Model.optimize()
