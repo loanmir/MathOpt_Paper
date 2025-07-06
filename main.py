@@ -1,4 +1,5 @@
 import math
+from re import S
 import gurobipy as gb
 import numpy as np
 import random
@@ -900,7 +901,13 @@ for r in R:
 # Implemented directly in the variable declaration! -> BUT ERROR IN CODE! (NOT SURE)
 
 # (65)
-# j not it S_rbc_s -----> ???
+for r in R:
+    for b in B_r[r]:
+        for c in C_b[b]:
+            for j in pi_r[r]:
+                for s in range(1, n_rbc[r, b, c] + 1):
+                    if j not in S_rbc_s[r, b, c, s]:
+                        ILP_Model.addConstr(y_jrbc_s[j,r,b,c,s] == 0, name=f"jrbc_zero_r{r}_b{b}_c{c}_j{j}_s{s}")
 
 # (66)
 # Implemented directly in the variable declaration! -> BUT ERROR IN CODE! (NOT SURE)
