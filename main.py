@@ -364,9 +364,12 @@ for cc, uoc in cc_uoc_pairs:
 # (4)
 for j in N:
     ILP_Model.addConstr(
-        gb.quicksum((nc_jc[j, c] + nod_jc[j, c]) * p_c for c in C) <= gb.quicksum(utp_t[t] * beta_t[t] for t in T_j[j]),   ## In this case we justr have p_c = 250!
-        name=f"Constraint_4_{j}"                                                                                           ## In updated base case we have several c's
+        gb.quicksum((nc_jc[j, c] + nod_jc[j, c]) * p_c for c in C) <= gb.quicksum(utp_t * beta_t[t] for t in T_j[j]),
+        name=f"Constraint_4_{j}"
     )
+    # In this case we just have p_c = 250!
+    # also utp_t is constant at utp_t = 800!
+    # In updated base case we have several c's
 
 # (5)
 for t in T:
@@ -377,14 +380,15 @@ for t in T:
 
 # (6)
 for r in R:
-    for b in BO & B_r[r]:
+    for b in (bus for bus in BO if bus in B_r[r]):                   #  for b in BO & B_r[r]
         ILP_Model.addConstr(
-            gb.quicksum(y_rbc[r, b, c] - y_rbco_b[r, b, co_b[b]] for c in C_b[b]) <= 0,         # take a look here on co_b!!! CAREFUL!
+            gb.quicksum(y_rbc[r, b, c] - y_rbco_b[r, b, co_b[b]] for c in C_b[b]) <= 0,
             name=f"Constraint_6_{r}_{b}"
         )
+        # take a look here on co_b!!! CAREFUL!
 
 # (7)
-for b in B - BO:
+for b in (b for b in B if b not in BO):          # for b in B - BO
     for c in C_b[b]:
         ILP_Model.addConstr(
             y_bc[b, c] <= gb.quicksum(y_rbc[r, b, c] for r in R),
@@ -394,7 +398,7 @@ for b in B - BO:
 # (8)
 R_size = len(R)
 
-for b in B - BO:
+for b in (b for b in B if b not in BO):            # for b in B - BO
     for c in C_b[b]:
         ILP_Model.addConstr(
             R_size * y_bc[b, c] >= gb.quicksum(y_rbc[r, b, c] for r in R),
@@ -402,7 +406,7 @@ for b in B - BO:
         )
 
 # (9)
-for b in B - BO:
+for b in (b for b in B if b not in BO):             # for b in B - BO
     ILP_Model.addConstr(
         gb.quicksum(y_bc[b, c] for c in C_b[b]) <= 1,
         name=f"Constraint_9_{b}"
@@ -412,14 +416,14 @@ for b in B - BO:
 
 for j in N:
     ILP_Model.addConstr(
-        gb.quicksum(np_jc[j, c] for c in C) + gb.quicksum(nop_jc[j, c] for c in C) <= up_j[j],   # nop_jc and up_j are both input variables -> Waiting for the data!
+        gb.quicksum(np_jc[j, c] for c in C) + gb.quicksum(nop_jc[j, c] for c in C) <= up_j[j],
         name=f"Constraint_10_{j}"
     )
 
 # (11)
-for j in D - NO:
+for j in (j for j in D if j not in NO):                                 # for j in D - NO
     ILP_Model.addConstr(
-        alpha_jc[j, c] - np_jc[j, c] <= 0,       # take a look at this again!!!
+        alpha_jc[j, c] - np_jc[j, c] <= 0,       # take a look at this again - There is no c loop!!!
         name=f"Constraint_11_{j}_{c}"
     )
 
@@ -435,7 +439,7 @@ for r in R:
 for r in R:
     for b in V_r[r]:
         ILP_Model.addConstr(
-            nv_rb[r, b] <= nv_rb_0[r, b],
+            nv_rb[r, b] <= nv_rb_0[r][b],                   # because of the structure of the dict
             name=f"Constraint_13_{r}_{b}"
         )
 
@@ -444,11 +448,13 @@ for r in R:
     for b in B_r[r]:
         for c in C_b[b]:
             ILP_Model.addConstr(
-                y_rbc[r, b, c] - sum(y_rbc_s[r, b, c] for s in range(1, n_rbc[r, b, c])) <= 0,  ### Is n_rbc an array ? in this case a 3D matrix?
-                                                                                                ## it represents the number of all possible scenarios s! TAKE A LOOK
+                y_rbc[r, b, c] - sum(y_rbc_s[r, b, c] for s in range(1, n_rbc[r, b, c] + 1)) <= 0,
+
                 name=f"Constraint_14_{r}_{b}_{c}"
             )
-
+            # Is n_rbc an array ? in this case a 3D matrix?
+            # it represents the number of all possible scenarios s! TAKE A LOOK
+            # n_rbc[r, b, c] + 1, because the range function would in this case arrive at n_rbc[r, b, c]
 # (15)
 for r in R:
     ILP_Model.addConstr(
@@ -495,7 +501,7 @@ for j in (j for j in N if j not in NO):          # for j in N - NO
         ns_j[j] <= gb.quicksum(np_jc[j, c] + nop_jc[j, c] for c in C),
         name=f"Constraint_20_{j}"
     )
-                                    ### as before -> nop_jc and up_j are input variables -> Waiting for data
+
 # (21)
 for j in (j for j in N if j not in NO):
     ILP_Model.addConstr(
@@ -507,14 +513,14 @@ for j in (j for j in N if j not in NO):
 for j in (j for j in N if j not in D):          # for j in N - D
     for c in C:
         ILP_Model.addConstr(
-            np_jc[j, c] >= ((nc_jc[j, c] + nod_jc[j, c])/uc_c) - nop_jc[j, c],       #nod_jc is an input -> Currently empty
-            name=f"Constraint_22_{j}_{c}"                                               # uc_c also an input -> Waiting for data!
+            np_jc[j, c] >= ((nc_jc[j, c] + nod_jc[j, c])/uc_c) - nop_jc[j, c],
+            name=f"Constraint_22_{j}_{c}"
         )
 
 # (23)
 for j in (j for j in N if j not in D):
     ILP_Model.addConstr(
-        gb.quicksum(np_jc[j, c] for c in C) + gb.quicksum(nop_jc[j, c] for c in C) <= up_j[j],  ### nop_jc and up_j input variables
+        gb.quicksum(np_jc[j, c] for c in C) + gb.quicksum(nop_jc[j, c] for c in C) <= up_j[j],
         name=f"Constraint_23_{j}"
     )
 
@@ -526,12 +532,11 @@ for r in R:
     )
 
 # (25)
-B_r_size = []
+B_r_size = {r: len(B_r[r]) for r in R}   # Look at this -> NOT SURE!!! should store size of B_r for each different r ?????????!!!
 
 for r in R:
-    B_r_size[r] = len(B_r[r])   # Look at this -> NOT SURE!!! should store size of B_r for each different r ?????????!!!
     ILP_Model.addConstr(
-        B_r_size * y_r[r] >= gb.quicksum(gb.quicksum(y_rbc[r, b, c] for c in C_b[b]) for b in B_r[r]),
+        B_r_size[r] * y_r[r] >= gb.quicksum(gb.quicksum(y_rbc[r, b, c] for c in C_b[b]) for b in B_r[r]),
         name=f"Constraint_25_{r}"
     )
 
