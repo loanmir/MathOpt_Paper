@@ -169,7 +169,7 @@ up_j["Stop5"] = 3
 
 uc_c = 5 # Constant because we have just one type!!!  TAKE A LOOK
 
-p_c = 260 # output power of one c-type plug device              ### ASK PROFESOR IF IT IS CONSTANT for all c or it CHANGES -> IN PAPER IS CONSTANT
+p_c = 260 # output power of one c-type plug device
 utp_t = 800 # output power of a power station at spot t ∈ T
 T_j = {
     "Depot1": ["Depot1"],
@@ -218,6 +218,7 @@ lt_r = {
     "r3": 18,
     "r4": 4
 }
+
 
 ut_r = {
     "r1": 7, 
@@ -273,6 +274,7 @@ for r in R:
         numerator = dem_0_r[r]
         denominator = cap_b[b]
         ub_rb[r][b] = math.ceil(numerator/denominator)
+
 
 
 
@@ -834,7 +836,7 @@ for j in (j for j in D if j not in NO):
             name=f"Constraint_53_a_{j}_{c}"
         )
         ILP_Model.addConstr(
-            nc_jc[j, c] <= (uc_c - nod_jc[j, c]),          # up_j and uc_c are inputs!!
+            nc_jc[j, c] <= (uc_c - nod_jc[j, c]),
             name=f"Constraint_53_b_{j}_{c}"
         )
 
