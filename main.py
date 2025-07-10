@@ -64,7 +64,7 @@ C = ["c1"] # charging type set   # In the base case |C| = 1 -> c = 1 -> we just 
 capacities = [153, 87, 175, 130, 80] #starting from electric and then non battery vehicles
 
 cap_b = {node: cap for node, cap in zip(B + V, capacities)} # passenger capacity of respective bus-types              # ASK PROFESSOR!!!!! -> IMPLEMENTING WITH ARRAY OR WITH DICTIONARY!!!!!!!!!!!!!!!!!!!!!!!!!
-d_b_MAX = [15, 25, 20] # driving range of fully charged b_bus_types-type electric bus
+d_b_MAX = {"E433":15, "E420":25, "E302":20} # driving range of fully charged b_bus_types-type electric bus
 ct_rjbc = { "r1":{  "stop1":{"E433":{"c1":6}, "E420":{"c1":10}, "E302":{"c1":13}},
                     "stop2":{"E433":{"c1":6}, "E420":{"c1":10}, "E302":{"c1":13}}},
             "r2":{  "stop2":{"E433":{"c1":6}},
@@ -118,7 +118,7 @@ V_r = {
 #L_r = [[]] # cycle time of any vehicle on route r - time between 2 consecutive departures of the same vehicle on route r
 
 C_b = {
-    "E443": "c1",           # Since in base case we have C = [1] then each bus type supports the same single charging type
+    "E433": "c1",           # Since in base case we have C = [1] then each bus type supports the same single charging type
     "E420": "c1",
     "E302": "c1",
 } # feasible charging type set for b-type electric buses
@@ -131,7 +131,7 @@ B_rc = {
 } # type set of c-type charging electric buses of route r
 
 co_b = {
-    "E443": "c1",           # Since in base case we have C = [1] then each bus type supports the same single charging type
+    "E433": "c1",           # Since in base case we have C = [1] then each bus type supports the same single charging type
     "E420": "c1",
     "E302": "c1",
 } # required charging type for bus type b   
@@ -248,10 +248,28 @@ n_rbc_data_2d = np.array([
     [2, 2, 2, 2],  # E302
 ])
 
+distance_r = {"r1": [4, 4],
+              "r2": [7, 4, 4, 7],
+              "r3": [5, 3, 3, 5],
+              "r4": [4, 4]} # distance of each stop in route r
+
+# This is to generate S_rbc_s
+S_rbc_s = {}
+for r in R:
+    stops = pi_r[r]
+    stop_dists = distance_r[r]
+    for b in B_r[r]:
+        for c in C_b[b]:
+            scenarios = di.generate_feasible_scenarios(r, stops, stop_dists, b, c, d_b_MAX[b])
+            for idx, s in enumerate(scenarios, 1):
+                S_rbc_s[(r, b, c, idx)] = list(s)
+
 # transpose to change the order of the axis and respect the roder of the inputs (r,b,c)
 n_rbc_data = n_rbc_data_2d[:, :, np.newaxis].transpose(1, 0, 2) #just this case since we need also a c dimensione even if it is just 1
 n_rbc = di.init_n_rbc(n_rbc_data, R, B, C) # Initialize n_rbc with data from data_inizialization module
 
+# Define R_jc
+R_jc = di.compute_all_R_jc(S_rbc_s)
 
 dem_0_r = {} # passenger capacity of route r to be satisfied by new electric buses and remaining non-battery vehicles
 for r in R:
