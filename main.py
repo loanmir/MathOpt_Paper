@@ -78,6 +78,7 @@ ct_rjbc = { "r1":{  "stop1":{"E433":{"c1":6}, "E420":{"c1":10}, "E302":{"c1":13}
             }
 
 
+
 cbus_b = {"E403":400000, "E420":500000, "E302":350000} # b_bus_types-type electric bus capital cost (initial investment for buying bus)
 vcb_rb = {"r1":{"E403":270000, "E420":200000, "E302":280000},
           "r2":{"E403":270000, "E420":200000, "E302":280000},
@@ -675,7 +676,7 @@ for j in (j for j in N if j not in D):
             for r in R_jc[j,c]:
                 for b in B_rc[r][c]:
                     ILP_Model.addConstr(
-                        nc_jrc_ct[j, r, c] <= ((ct_rjbc[r][j][b][c] * y_jrbc[j, r, b, c]) / lt_r[r]) + nc_jcr_max[j, c, r](1 - xi_jrcb[j, r, b, c]),
+                        nc_jrc_ct[j, r, c] <= ((ct_rjbc[r][j][b][c] * y_jrbc[j, r, b, c]) / lt_r[r]) + di.compute_nc_jrc_max[r, j, c, br_c](1 - xi_jrcb[j, r, b, c]),
                         name=f"Constraint_39_{j}_{r}_{c}_{b}"
                     )
 
