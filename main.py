@@ -167,7 +167,7 @@ up_j["Stop5"] = 3
 
 
 
-uc_c = 5 # Constant because we have just one type!!!  TAKE A LOOK
+uc_c = {"c1":5} # Constant because we have just one type!!!  TAKE A LOOK
 
 p_c = 260 # output power of one c-type plug device
 utp_t = 800 # output power of a power station at spot t ∈ T
@@ -186,7 +186,7 @@ nv_rb_0 = {
     "r2" : {"M103": 2, "M104": 0},
     "r3" : {"M103": 1, "M104": 2},
     "r4" : {"M103": 1, "M104": 1},
-}
+} # number of b-type non-battery vehicles on route r
 
 nob_rb = {
     "r1": {"E433": 0},
@@ -357,13 +357,29 @@ y_jrbc_s = ILP_Model.addVars([(j,r,b,c,s) for r in R for b in B_r[r] for j in pi
 #-------------------------------- Objective function -----------------------------------#
 
 ILP_Model.setObjective(
-    (gb.quicksum((Z_r[r] - gb.quicksum(nv_rb[r, b] * cap_b[b] for b in V_r[r]) / dem_r[r]) for r in R)) -
-    (gb.quicksum(gb.quicksum(nc_jc[j, c] for c in C) for j in N) / (len(N) * gb.quicksum(uc_c for c in C))) -
-    (gb.quicksum(gb.quicksum(np_jc[j, c] for c in C) for j in N) / (gb.quicksum(up_j[j] for j in N))) -
-    (gb.quicksum(beta_t[t] for t in T - TO) / (len(T))) - 
-    (gb.quicksum(gb.quicksum(gamma_tj[t, j] for t in T_j[j]) for j in N - NO) / (len(T) * len(N))),
+    gb.quicksum(
+        Z_r[r] - (gb.quicksum(nv_rb[r, b] * cap_b[b] for b in V_r[r]) / float(dem_r[r]))
+        for r in R
+    )
+    - (
+        gb.quicksum(nc_jc[j, c] for j in N for c in C) /
+        (len(N) * float(sum(uc_c[c] for c in C)))
+    )
+    - (
+        gb.quicksum(np_jc[j, c] for j in N for c in C) /
+        float(sum(up_j[j] for j in N))
+    )
+    - (
+        gb.quicksum(beta_t[t] for t in T if t not in TO) /
+        float(len(T))
+    )
+    - (
+        gb.quicksum(gamma_tj[t, j] for j in N if j not in NO for t in T_j[j]) /
+        float(len(T) * len(N))
+    ),
     sense=gb.GRB.MAXIMIZE
 )
+
 
 #---------------------------------------------------------------------------------------#
 
