@@ -78,11 +78,11 @@ ct_rjbc = { "r1":{  "Stop1":{"E433":{"c1":6}, "E420":{"c1":10}, "E302":{"c1":13}
 
 
 
-cbus_b = {"E403":400000, "E420":500000, "E302":350000} # b_bus_types-type electric bus capital cost (initial investment for buying bus)
-vcb_rb = {"r1":{"E403":270000, "E420":200000, "E302":280000},
-          "r2":{"E403":270000, "E420":200000, "E302":280000},
-          "r3":{"E403":270000, "E420":200000, "E302":280000},
-          "r4":{"E403":270000, "E420":200000, "E302":280000}} # variable cost of b_bus_types-type electric bus on route r
+cbus_b = {"E433":400000, "E420":500000, "E302":350000} # b_bus_types-type electric bus capital cost (initial investment for buying bus)
+vcb_rb = {"r1":{"E433":270000, "E420":200000, "E302":280000},
+          "r2":{"E433":270000, "E420":200000, "E302":280000},
+          "r3":{"E433":270000, "E420":200000, "E302":280000},
+          "r4":{"E433":270000, "E420":200000, "E302":280000}} # variable cost of b_bus_types-type electric bus on route r
 
 
 # COST INPUTS (considered constant for all c types (one at the moment) and all j stops)
@@ -137,9 +137,9 @@ BO_rc = {
 } #  type set of c-type charging old electric buses of route r
 
 co_b = {
-    "E433": "c1",           # Since in base case we have C = [1] then each bus type supports the same single charging type
-    "E420": "c1",
-    "E302": "c1",
+    "E433": ["c1"],           # Since in base case we have C = [1] then each bus type supports the same single charging type
+    "E420": ["c1"],
+    "E302": ["c1"],
 } # required charging type for bus type b   
                                                                         
 nod_jc = {
@@ -372,14 +372,14 @@ y_bc = ILP_Model.addVars([(b, c) for b in B for c in C], vtype=gb.GRB.BINARY, na
 y_jrbc = ILP_Model.addVars([(j, r, b, c) for j in N for r in R for b in B for c in C], vtype=gb.GRB.BINARY, name="y_jrbc")
 
 #  Variables related to the charging equipment quantities
-ns_j = ILP_Model.addVars([j for j in N if j not in NO], vtype=gb.GRB.BINARY, name="ns_j") # constraint (57) already integrated here
+ns_j = ILP_Model.addVars([j for j in N], vtype=gb.GRB.BINARY, name="ns_j") # constraint (57) already integrated here
 alpha_jc = ILP_Model.addVars([j for j in D if j not in NO], vtype=gb.GRB.BINARY, name="alpha_jc") # constraint (60) already integrated here
 nc_jc = ILP_Model.addVars([(j, c) for j in N for c in C], vtype=gb.GRB.INTEGER, lb=0 ,name="nc_jc")
-np_jc = ILP_Model.addVars([j for j in N if j not in D], [c for c in C], vtype=gb.GRB.INTEGER, lb=0, ub=1,name="np_jc") # constraint (56) already integrated here
+np_jc = ILP_Model.addVars([j for j in N], [c for c in C], vtype=gb.GRB.INTEGER, lb=0, ub=1,name="np_jc") # constraint (56) already integrated here
 
 # Variables related to the allocation and links of power stations with the charging locations
-beta_t = ILP_Model.addVars([t for t in T if t not in TO], vtype=gb.GRB.BINARY, name="beta_t") # constraint (46) already integrated here
-gamma_tj = ILP_Model.addVars([t for t in T if t not in TO], vtype=gb.GRB.BINARY, name="gamma_tj")
+beta_t = ILP_Model.addVars([t for t in T], vtype=gb.GRB.BINARY, name="beta_t") # constraint (46) already integrated here
+gamma_tj = ILP_Model.addVars([(t, j) for t in T for j in N], vtype=gb.GRB.BINARY, name="gamma_tj")
 
 # Additional variables
 Z_r = ILP_Model.addVars([(r) for r in R], vtype=gb.GRB.INTEGER,lb=0, ub={(r): dem_r[r] for r in R}, name="Z_r") # constraint (49) integrated
@@ -391,7 +391,7 @@ nv_rb = ILP_Model.addVars([(r,b) for r in R for b in V_r[r]], vtype=gb.GRB.INTEG
 #-------------------------------- Constraints variables--------------------------------#
 
 # from (1) to (10)
-y_rbco_b = ILP_Model.addVars([(r,b,c) for r in R for b in B for c in co_b], vtype=gb.GRB.BINARY, name="y_rbco_b")
+y_rbco_b = ILP_Model.addVars([(r,b,c) for r in R for b in B for c in co_b[b]], vtype=gb.GRB.BINARY, name="y_rbco_b")
 
 # from (31) to (42)
 eta_jrc_1 = ILP_Model.addVars([(j,r,c) for j in N for r in R for c in C], vtype=gb.GRB.BINARY, name="eta_jrc_1")
@@ -492,10 +492,9 @@ for t in T:
 for r in R:
     for b in (bus for bus in BO if bus in B_r[r]):                   # for b in BO & B_r[r]
         ILP_Model.addConstr(
-            gb.quicksum(y_rbc[r, b, c] - y_rbco_b[r, b, co_b[b]] for c in C_b[b]) <= 0,
+            gb.quicksum(y_rbc[r, b, c] - y_rbco_b[r, b, co_b[b][0]] for c in C_b[b]) <= 0,
             name=f"Constraint_6_{r}_{b}"
         )
-        # take a look here on co_b!!! CAREFUL!
 
 # (7)
 for b in (b for b in B if b not in BO):          # for b in B - BO
