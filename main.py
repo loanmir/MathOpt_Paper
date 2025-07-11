@@ -565,7 +565,7 @@ for j in (j for j in N if j not in NO):
 for j in (j for j in N if j not in D):          # for j in N - D
     for c in C:
         ILP_Model.addConstr(
-            np_jc[j, c] >= ((nc_jc[j, c] + nod_jc[j, c])/uc_c) - nop_jc[j, c],
+            np_jc[j, c] >= ((nc_jc[j, c] + nod_jc[j, c])/uc_c[c]) - nop_jc[j, c],
             name=f"Constraint_22_{j}_{c}"
         )
 
@@ -630,7 +630,7 @@ for r in R:
 for j in (j for j in D if j not in NO):                 # for j in D - NO
     for c in C:
         ILP_Model.addConstr(
-            uc_c * alpha_jc[j, c] - nc_jc[j, c] <= 0,
+            uc_c[c] * alpha_jc[j, c] - nc_jc[j, c] <= 0,
             name=f"Constraint_30_{j}_{c}"
         )
 
@@ -674,7 +674,7 @@ for j in (j for j in N if j not in D):
         for c in C:
             for r in R_jc[j,c]:
                 ILP_Model.addConstr(
-                nc_jrc[j, r, c] >= nc_jrc_ct[j, r, c] - up_j[j] * uc_c * (1 - eta_jrc_1[j, r, c]),
+                nc_jrc[j, r, c] >= nc_jrc_ct[j, r, c] - up_j[j] * uc_c[c] * (1 - eta_jrc_1[j, r, c]),
                 name=f"Constraint_35_{j}_{r}_{c}"
             )
 
@@ -683,7 +683,7 @@ for j in (j for j in N if j not in D):
         for c in C:
             for r in R_jc[j,c]:
                 ILP_Model.addConstr(
-                nc_jrc[j, r, c] >= nc_jrc_b[j, r, c] - up_j[j] * uc_c * (1 - eta_jrc_2[j, r, c]),
+                nc_jrc[j, r, c] >= nc_jrc_b[j, r, c] - up_j[j] * uc_c[c] * (1 - eta_jrc_2[j, r, c]),
                 name=f"Constraint_36_{j}_{r}_{c}"
             )
 
@@ -844,7 +844,7 @@ for j in (j for j in N if j not in D):
             name=f"Constraint_53_a_{j}_{c}"
         )
         ILP_Model.addConstr(
-            nc_jc[j, c] <= (up_j[j] * uc_c - nod_jc[j, c]),          # up_j and uc_c are inputs!!
+            nc_jc[j, c] <= (up_j[j] * uc_c[c] - nod_jc[j, c]),          # up_j and uc_c are inputs!!
             name=f"Constraint_53_b_{j}_{c}"
         )
 
@@ -870,7 +870,7 @@ for j in (j for j in D if j not in NO):
             name=f"Constraint_53_a_{j}_{c}"
         )
         ILP_Model.addConstr(
-            nc_jc[j, c] <= (uc_c - nod_jc[j, c]),
+            nc_jc[j, c] <= (uc_c[c] - nod_jc[j, c]),
             name=f"Constraint_53_b_{j}_{c}"
         )
 
@@ -929,7 +929,7 @@ for r in R:
             name=f"Constraint_63_a_{j}_{r}_{c}"
         )
             ILP_Model.addConstr(
-            nc_jrc[j, r, c] <= min(up_j[j] * uc_c, nc_jrc_max[j, r, c]),             # nc_jrc_max = math.ceil((max{ct_jrbc for b in B_rc})/ lt_r)    !!!!!
+            nc_jrc[j, r, c] <= min(up_j[j] * uc_c[c], nc_jrc_max[j, r, c]),             # nc_jrc_max = math.ceil((max{ct_jrbc for b in B_rc})/ lt_r)    !!!!!
             name=f"Constraint_63_b_{j}_{r}_{c}"
         )
 
