@@ -51,6 +51,28 @@ def compute_nc_jrc_max(route_r, stop_j, charge_type_c, B_rc, ctjrbc_dict, ltr_r)
     nc_jrc_max = math.ceil(max_ct / ltr_r) if ltr_r > 0 else 0
     return nc_jrc_max
 
+def compute_noc_jrc_ct(route_r, stop_j, charge_type_c, BO_rc, ctjrbc_dict, ltr_r):
+    """
+    Parameters:
+    - route_r: ID of the route
+    - stop_j: ID of the stop
+    - charge_type_c: charging type
+    - B_rc: list of bus types b used on route r with charger type c
+    - ctrjbc_dict: dictionary {(j, r, b, c): ctrjbc} with charging times
+    - ltr_r: minimum traffic interval on route r
+
+    Returns:
+    - nc_jrc_max: upper bound on plug devices at stop j, route r, charger type c
+    """
+    max_ct = 0
+    for b in BO_rc:
+        key = (stop_j, route_r, b, charge_type_c)
+        if key in ctjrbc_dict:
+            max_ct = max(max_ct, ctjrbc_dict[key])
+    
+    nc_jrc_max = math.ceil(max_ct / ltr_r) if ltr_r > 0 else 0
+    return nc_jrc_max
+
 
 def generate_feasible_scenarios(route_id, stops, stop_distances, b_type, c_type, dmax_b):
     """
@@ -104,5 +126,22 @@ def compute_all_R_jc(S_rbc_s):
 
     return R_jc_dict
 
+def compute_l_rbc_s(S_rbc_s):
+    """
+    Computes l_rbc_s for all (r, b, c, s) pairs from the scenario data S_rbc_s.
 
+    returns: 
+    {
+    ('r1', 'E433', 'c1', 1): 2,
+    ('r1', 'E433', 'c1', 2): 1,
+    ('r2', 'E433', 'c1', 1): 3,
+    ...
+    }
+    
+    """
+    l_rbc_s = {
+        (r, b, c, s): len(S_rbc_s[(r, b, c, s)])
+        for (r, b, c, s) in S_rbc_s
+    }
+    return l_rbc_s
 

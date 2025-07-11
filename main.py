@@ -24,7 +24,7 @@ G.add_edge("Stop1", "Stop2", distance=4)
 G.add_edge("Stop2", "Stop3", distance=2)
 G.add_edge("Stop3", "Stop5", distance=5)
 G.add_edge("Stop5", "Depot2", distance=4)
-G.add_edge("Stop5", "stop2", distance=6)
+G.add_edge("Stop5", "Stop2", distance=6)
 G.add_edge("Depot1", "Stop4", distance=6)
 G.add_edge("Stop4", "Stop5", distance=7)
 G.add_edge("Depot2", "Stop3", distance=3)
@@ -58,23 +58,22 @@ B = ["E433", "E420", "E302"] # electric bus-type
 BO = ["E433"] # old electric bus types set
 
 C = ["c1"] # charging type set   # In the base case |C| = 1 -> c = 1 -> we just have one charging type -> In the random cases, so modified base cases -> we several c types
-#S_rbc_s = []   # Look how to implement this
 
 # BUS INPUTS
 capacities = [153, 87, 175, 130, 80] #starting from electric and then non battery vehicles
 
 cap_b = {node: cap for node, cap in zip(B + V, capacities)} # passenger capacity of respective bus-types              # ASK PROFESSOR!!!!! -> IMPLEMENTING WITH ARRAY OR WITH DICTIONARY!!!!!!!!!!!!!!!!!!!!!!!!!
 d_b_MAX = {"E433":15, "E420":25, "E302":20} # driving range of fully charged b_bus_types-type electric bus
-ct_rjbc = { "r1":{  "stop1":{"E433":{"c1":6}, "E420":{"c1":10}, "E302":{"c1":13}},
-                    "stop2":{"E433":{"c1":6}, "E420":{"c1":10}, "E302":{"c1":13}}},
-            "r2":{  "stop2":{"E433":{"c1":6}},
-                    "stop4":{"E433":{"c1":6}},
-                    "stop5":{"E433":{"c1":6}}},
-            "r3":{  "stop2":{"E420":{"c1":10}, "E302":{"c1":13}},
-                    "stop3":{"E420":{"c1":10}, "E302":{"c1":13}},
-                    "stop5":{"E420":{"c1":10}, "E302":{"c1":13}}},
-            "r4":{  "stop1":{"E433":{"c1":6}, "E420":{"c1":10}},
-                    "stop2":{"E433":{"c1":6}, "E420":{"c1":10}}}
+ct_rjbc = { "r1":{  "Stop1":{"E433":{"c1":6}, "E420":{"c1":10}, "E302":{"c1":13}},
+                    "Stop2":{"E433":{"c1":6}, "E420":{"c1":10}, "E302":{"c1":13}}},
+            "r2":{  "Stop2":{"E433":{"c1":6}},
+                    "Stop4":{"E433":{"c1":6}},
+                    "Stop5":{"E433":{"c1":6}}},
+            "r3":{  "Stop2":{"E420":{"c1":10}, "E302":{"c1":13}},
+                    "Stop3":{"E420":{"c1":10}, "E302":{"c1":13}},
+                    "Stop5":{"E420":{"c1":10}, "E302":{"c1":13}}},
+            "r4":{  "Stop1":{"E433":{"c1":6}, "E420":{"c1":10}},
+                    "Stop2":{"E433":{"c1":6}, "E420":{"c1":10}}}
             }
 
 
@@ -118,9 +117,9 @@ V_r = {
 #L_r = [[]] # cycle time of any vehicle on route r - time between 2 consecutive departures of the same vehicle on route r
 
 C_b = {
-    "E433": "c1",           # Since in base case we have C = [1] then each bus type supports the same single charging type
-    "E420": "c1",
-    "E302": "c1",
+    "E433": ["c1"],           # Since in base case we have C = [1] then each bus type supports the same single charging type
+    "E420": ["c1"],
+    "E302": ["c1"],
 } # feasible charging type set for b-type electric buses
 
 B_rc = {
@@ -129,6 +128,13 @@ B_rc = {
     "r3": {"c1": ["E420", "E302"]},
     "r4": {"c1": ["E433", "E420"]},                        # Also here we have one single charger type
 } # type set of c-type charging electric buses of route r
+
+BO_rc = {
+    "r1": {"c1": ["E433"]},
+    "r2": {"c1": ["E433"]},
+    "r3": {"c1": ["E433"]},
+    "r4": {"c1": ["E433"]},                     
+} #  type set of c-type charging old electric buses of route r
 
 co_b = {
     "E433": "c1",           # Since in base case we have C = [1] then each bus type supports the same single charging type
@@ -195,6 +201,13 @@ nob_rb = {
     "r4": {"E433": 2},
 } # number of old b-type electric buses on route r
 
+nob_rbc = {
+    "r1": {"E433": {"c1":0}},
+    "r2": {"E433": {"c1":1}},
+    "r3": {"E433": {"c1":2}},
+    "r4": {"E433": {"c1":2}},
+} # number of old b-type electric buses on route r
+
 dem_r = {}  # passenger demand of route r = past passenger capacity of all route r vehicles
             
 # Calculate the passenger demand for each route
@@ -228,17 +241,25 @@ ut_r = {
 }
 
 pi_r = {
-    "r1": ["stop1", "stop2", "stop1"],
-    "r2": ["stop4", "stop5", "stop2", "stop5", "stop4"],
-    "r3": ["stop5", "stop3", "stop2", "stop3", "stop5"],
-    "r4": ["stop2", "stop1", "stop2"]
+    "r1": ["Stop1", "Stop2"],
+    "r2": ["Stop4", "Stop5", "Stop2"],
+    "r3": ["Stop5", "Stop3", "Stop2"],
+    "r4": ["Stop2", "Stop1"]
 } # route r cycle
 
 d_r = {
-    "r1": "depot1",
-    "r2": "depot1",
-    "r3": "depot2",
-    "r4": "depot2"
+    "r1": ["depot1"],
+    "r2": ["depot1"],
+    "r3": ["depot2"],
+    "r4": ["depot2"]
+}
+
+# define L_r (should be: ut_r * num_of_old_veichles_operating_on_the_route)
+L_r = {
+    "r1": 7*5,  # cycle time of route r1
+    "r2": 20*3,  # cycle time of route r2
+    "r3": 20*5,  # cycle time of route r3
+    "r4": 5*4   # cycle time of route r4
 }
 
 
@@ -270,6 +291,42 @@ n_rbc = di.init_n_rbc(n_rbc_data, R, B, C) # Initialize n_rbc with data from dat
 
 # Define R_jc
 R_jc = di.compute_all_R_jc(S_rbc_s)
+
+# Define nc_jrc_max
+nc_jrc_max = {}
+
+for j in N:
+    if j not in D:
+        print(f"Processing stop: {j}")
+        for c in C:
+            for r in R_jc[j,c]:
+                
+                # Initialize nested dictionaries if not present
+                if j not in nc_jrc_max:
+                    nc_jrc_max[j] = {}
+                if r not in nc_jrc_max[j]:
+                    nc_jrc_max[j][r] = {}
+                
+                x =  di.compute_nc_jrc_max(r,j,c, B_rc[r][c], ct_rjbc, lt_r[r]) # This will compute the maximum number of plug devices at stop j, route r, charger type c
+                nc_jrc_max[j][r][c] = x
+
+# Define noc_jrc_ct
+noc_jrc_ct = {} 
+
+for j in N:
+    if j not in D:
+        print(f"Processing stop: {j}")
+        for c in C:
+            for r in R_jc[j,c]:
+                
+                # Initialize nested dictionaries if not present
+                if j not in noc_jrc_ct:
+                    noc_jrc_ct[j] = {}
+                if r not in noc_jrc_ct[j]:
+                    noc_jrc_ct[j][r] = {}
+                
+                x =  di.compute_noc_jrc_ct(r,j,c, BO_rc[r][c], ct_rjbc, lt_r[r]) # This will compute the maximum number of plug devices at stop j, route r, charger type c
+                noc_jrc_ct[j][r][c] = x
 
 dem_0_r = {} # passenger capacity of route r to be satisfied by new electric buses and remaining non-battery vehicles
 for r in R:
@@ -304,7 +361,7 @@ for r in R:
 #-------------------------------- MAIN decision variables------------------------------#
 
 # Quantity of new buses variables
-nb_rbc = ILP_Model.addVars([(r, b, c) for r in R for b in B_r[r] for c in C_b[b]], vtype=gb.GRB.INTEGER, lb=0, ub={(r,b,c): ub_rb[r, b] for r in R for b in B_r[r] for c in C_b[b]}, name="nb_rbc") # constraint (50) integrated
+nb_rbc = ILP_Model.addVars([(r, b, c) for r in R for b in B_r[r] for c in C_b[b]], vtype=gb.GRB.INTEGER, lb=0, ub={(r,b,c): ub_rb[r][b] for r in R for b in B_r[r] for c in C_b[b]}, name="nb_rbc") # constraint (50) integrated
 y_rbc = ILP_Model.addVars([(r, b, c) for r in R for b in B_r[r] for c in C_b[b]], vtype=gb.GRB.BINARY, name="y_rbc") # constraint (59) already integrated here
 y_r = ILP_Model.addVars([(r) for r in R], vtype=gb.GRB.BINARY, name="y_r") # constraint (52) already integrated here
 y_rb = ILP_Model.addVars([(r, b) for r in R for b in B_r[r]] , vtype=gb.GRB.BINARY, name="y_rb") # constraint (58) already integrated here
@@ -342,9 +399,11 @@ eta_jrc_2 = ILP_Model.addVars([(j,r,c) for j in N for r in R for c in C], vtype=
 xi_jrc = ILP_Model.addVars([(j,r,c) for j in N for r in R for c in C], vtype=gb.GRB.BINARY, name="xi_jrc")
 xi_jrcb = ILP_Model.addVars([(j,r,c,b) for j in N for r in R for c in C for b in B], vtype=gb.GRB.BINARY, name="xi_jrcb")
 
-nc_jrc = ILP_Model.addVars([(j,r,c) for r in R for j in pi_r[r] for c in C], vtype=gb.GRB.INTEGER, ) 
-nc_jrc_b = ILP_Model.addVars([(j,r,c) for r in R for j in pi_r[r] for c in C] ,vtype=gb.GRB.INTEGER, name="nc_jrc_b")
-nc_jrc_ct = ILP_Model.addVars([(j,r,c) for r in R for j in pi_r[r] for c in C], vtype=gb.GRB.INTEGER, name="nc_jrc_ct")
+unique_jrc = set((j, r, c) for r in R for j in pi_r[r] for c in C)
+
+nc_jrc = ILP_Model.addVars([(j, r, c) for r in R for j in pi_r[r] for c in C], vtype=gb.GRB.INTEGER) 
+nc_jrc_b = ILP_Model.addVars([(j, r, c) for r in R for j in pi_r[r] for c in C] ,vtype=gb.GRB.INTEGER, name="nc_jrc_b")
+nc_jrc_ct = ILP_Model.addVars([(j, r, c) for r in R for j in pi_r[r] for c in C], vtype=gb.GRB.INTEGER, name="nc_jrc_ct")
 # constraint (61) already integrated here
 
 # from (43) to (44)
@@ -647,7 +706,7 @@ for j in (j for j in N if j not in D):                  # for j in N - D
         for c in C:
             for r in R_jc[j,c]:
                 ILP_Model.addConstr(
-                nc_jrc_b[j, r, c] == gb.quicksum(nb_rbc[r, b, c] + nob_rbc[r, b, c] for b in B_rc[r][c]),
+                nc_jrc_b[j, r, c] == gb.quicksum(nb_rbc[r, b, c] + nob_rbc[r][b][c] for b in B_rc[r][c]),
                 name=f"Constraint_32_{j}_{r}_{c}"
             )
 
@@ -712,7 +771,7 @@ for j in (j for j in N if j not in D):
             for r in R_jc[j,c]:
                 for b in B_rc[r][c]:
                     ILP_Model.addConstr(
-                        nc_jrc_ct[j, r, c] <= ((ct_rjbc[r][j][b][c] * y_jrbc[j, r, b, c]) / lt_r[r]) + di.compute_nc_jrc_max[r, j, c, br_c](1 - xi_jrcb[j, r, b, c]),
+                        nc_jrc_ct[j, r, c] <= ((ct_rjbc[r][j][b][c] * y_jrbc[j, r, b, c]) / lt_r[r]) + nc_jrc_max[j][r][c](1 - xi_jrcb[j, r, b, c]),
                         name=f"Constraint_39_{j}_{r}_{c}_{b}"
                     )
 
@@ -735,7 +794,7 @@ for j in (j for j in N if j not in D):
             for r in R_jc[j, c]:
                 for b in B_rc[r][c]:
                     ILP_Model.addConstr(
-                        nc_jrc_ct[j, r, c] <= noc_jrc_ct[j, r, c] + nc_jrc_max[j, r, c] * (1 - xi_jrc[j, r, c]),
+                        nc_jrc_ct[j, r, c] <= noc_jrc_ct[j, r, c] + nc_jrc_max[j][r][c] * (1 - xi_jrc[j, r, c]),
                         name=f"Constraint_41_{j}_{r}_{c}_{b}"
                     )
 
@@ -766,7 +825,7 @@ for r in R:
                     predecessors = S_rbc_s[(r, b, c, s)]            ### IS this indexing written correctly or we should write the indices independently - [r, b, c, s]
                     ILP_Model.addConstr(
                         gb.quicksum(y_jrbc_s[j, r, b, c] for j in predecessors) -
-                        l_rbc_s[r, b, c] * y_rbc_s[r, b, c] == 0,                   # l_rbc_s is the number of stops in a scenario s! -> How to find this value!
+                        di.compute_l_rbc_s(S_rbc_s)[r, b, c, s] * y_rbc_s[r, b, c] == 0,                   # l_rbc_s is the number of stops in a scenario s! -> How to find this value!
                         name=f"Constraint_44_{r}_{b}_{c}_{s}"
                     )
 
