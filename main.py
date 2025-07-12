@@ -65,16 +65,16 @@ capacities = [153, 87, 175, 130, 80] #starting from electric and then non batter
 
 cap_b = {node: cap for node, cap in zip(B + V, capacities)} # passenger capacity of respective bus-types              # ASK PROFESSOR!!!!! -> IMPLEMENTING WITH ARRAY OR WITH DICTIONARY!!!!!!!!!!!!!!!!!!!!!!!!!
 d_b_MAX = {"E433":15, "E420":25, "E302":20} # driving range of fully charged b_bus_types-type electric bus
-ct_rjbc = { "r1":{  "Stop1":{"E433":{"c1":6}, "E420":{"c1":10}, "E302":{"c1":13}},
-                    "Stop2":{"E433":{"c1":6}, "E420":{"c1":10}, "E302":{"c1":13}}},
-            "r2":{  "Stop2":{"E433":{"c1":6}},
-                    "Stop4":{"E433":{"c1":6}},
-                    "Stop5":{"E433":{"c1":6}}},
-            "r3":{  "Stop2":{"E420":{"c1":10}, "E302":{"c1":13}},
-                    "Stop3":{"E420":{"c1":10}, "E302":{"c1":13}},
-                    "Stop5":{"E420":{"c1":10}, "E302":{"c1":13}}},
-            "r4":{  "Stop1":{"E433":{"c1":6}, "E420":{"c1":10}},
-                    "Stop2":{"E433":{"c1":6}, "E420":{"c1":10}}}
+ct_rjbc = { "r1":{  "Stop1":{"E433":{"c1":26}, "E420":{"c1":25}, "E302":{"c1":27}},
+                    "Stop2":{"E433":{"c1":26}, "E420":{"c1":25}, "E302":{"c1":27}}},
+            "r2":{  "Stop2":{"E433":{"c1":26}},
+                    "Stop4":{"E433":{"c1":26}},
+                    "Stop5":{"E433":{"c1":26}}},
+            "r3":{  "Stop2":{"E420":{"c1":30}, "E302":{"c1":27}},
+                    "Stop3":{"E420":{"c1":30}, "E302":{"c1":27}},
+                    "Stop5":{"E420":{"c1":30}, "E302":{"c1":27}}},
+            "r4":{  "Stop1":{"E433":{"c1":26}, "E420":{"c1":25}},
+                    "Stop2":{"E433":{"c1":26}, "E420":{"c1":25}}}
             }
 
 
@@ -146,7 +146,7 @@ nod_jc = {
 } # number of old c-type plugs devices at stop j
 nod_jc["Depot1", "c1"] = 2
 nod_jc["Stop1", "c1"] = 1
-nod_jc["Stop3", "c1"] = 3
+nod_jc["Stop3", "c1"] = 2
 nod_jc["Stop5", "c1"] = 1
 
 nop_jc = {

@@ -29,14 +29,14 @@ def init_n_rbc(n_rbc_data, r_set, b_set, c_set):
 
 
 
-def compute_nc_jrc_max(route_r, stop_j, charge_type_c, B_rc, ctjrbc_dict, ltr_r):
+def compute_nc_jrc_max(route_r, stop_j, charge_type_c, B_rc, ct_rjbc_dict, ltr_r):
     """
     Parameters:
     - route_r: ID of the route
     - stop_j: ID of the stop
     - charge_type_c: charging type
     - B_rc: list of bus types b used on route r with charger type c
-    - ctrjbc_dict: dictionary {(j, r, b, c): ctrjbc} with charging times
+    - ct_rjbc_dict: nested dict ct_rjbc[r][j][b][c]
     - ltr_r: minimum traffic interval on route r
 
     Returns:
@@ -44,14 +44,15 @@ def compute_nc_jrc_max(route_r, stop_j, charge_type_c, B_rc, ctjrbc_dict, ltr_r)
     """
     max_ct = 0
     for b in B_rc:
-        key = (stop_j, route_r, b, charge_type_c)
-        if key in ctjrbc_dict:
-            max_ct = max(max_ct, ctjrbc_dict[key])
-    
+        try:
+            ct = ct_rjbc_dict[route_r][stop_j][b][charge_type_c]
+            max_ct = max(max_ct, ct)
+        except KeyError:
+            continue  # skip if any key is missing
     nc_jrc_max = math.ceil(max_ct / ltr_r) if ltr_r > 0 else 0
     return nc_jrc_max
 
-def compute_noc_jrc_ct(route_r, stop_j, charge_type_c, BO_rc, ctjrbc_dict, ltr_r):
+def compute_noc_jrc_ct(route_r, stop_j, charge_type_c, BO_rc, ct_rjbc_dict, ltr_r):
     """
     Parameters:
     - route_r: ID of the route
@@ -66,10 +67,11 @@ def compute_noc_jrc_ct(route_r, stop_j, charge_type_c, BO_rc, ctjrbc_dict, ltr_r
     """
     max_ct = 0
     for b in BO_rc:
-        key = (stop_j, route_r, b, charge_type_c)
-        if key in ctjrbc_dict:
-            max_ct = max(max_ct, ctjrbc_dict[key])
-    
+        try:
+            ct = ct_rjbc_dict[route_r][stop_j][b][charge_type_c]
+            max_ct = max(max_ct, ct)
+        except KeyError:
+            continue
     nc_jrc_max = math.ceil(max_ct / ltr_r) if ltr_r > 0 else 0
     return nc_jrc_max
 
