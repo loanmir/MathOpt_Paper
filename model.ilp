@@ -1,0 +1,13 @@
+\ Model Electric_Bus_Model_copy
+\ LP format - for model browsing. Use MPS format to capture full model detail.
+\ Signature: 0x717cb8e710dc9663
+Maximize
+ 
+Subject To
+ Constraint_31_Stop3_c1: nc_jc[Stop3,c1] - C401 = -3
+ Constraint_63_b_Stop3_r3_c1: C401 <= 0
+Bounds
+ C401 free
+Generals
+ nc_jc[Stop3,c1] C401
+End
