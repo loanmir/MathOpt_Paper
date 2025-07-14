@@ -145,8 +145,11 @@ nod_jc = {
     (j, c): 0 for j in N if G.nodes[j] and G.nodes[j] for c in C
 } # number of old c-type plugs devices at stop j
 nod_jc["Depot1", "c1"] = 2
+nod_jc["Depot2", "c1"] = 0
 nod_jc["Stop1", "c1"] = 1
+nod_jc["Stop2", "c1"] = 0
 nod_jc["Stop3", "c1"] = 2
+nod_jc["Stop4", "c1"] = 0
 nod_jc["Stop5", "c1"] = 1
 
 nop_jc = {
@@ -175,7 +178,7 @@ up_j["Stop5"] = 3
 uc_c = {"c1":5} # Constant because we have just one type!!!  TAKE A LOOK
 
 p_c = 260 # output power of one c-type plug device
-utp_t = 800 # output power of a power station at spot t ∈ T
+utp_t = 1300 # output power of a power station at spot t ∈ T
 T_j = {
     "Depot1": ["Depot1"],
     "Depot2": ["Depot2"],
@@ -1005,10 +1008,23 @@ for r in R:
 ILP_Model.optimize()
 
 
+
+
 if ILP_Model.status == gb.GRB.INFEASIBLE:
     print("Model is infeasible. Computing IIS...")
     ILP_Model.computeIIS()
     ILP_Model.write("model.ilp")
-    ILP_Model.write("model.ilp.iis")
-    print("IIS written to model.ilp.iis. Please inspect this file for conflicting constraints.")
 
+'''
+for v in ILP_Model.getVars():
+    print(f"{v.VarName}: {v.X}")
+'''
+
+print(dem_r)
+print(dem_0_r)
+
+'''
+for c in ILP_Model.getConstrs():
+    if c.IISConstr:
+        print(f"Infeasible Constraint: {c.ConstrName}")
+'''
