@@ -313,7 +313,6 @@ noc_jrc_ct = {}
 
 for j in N:
     if j not in D:
-        print(f"Processing stop: {j}")
         for c in C:
             for r in R_jc[j,c]:
                 
