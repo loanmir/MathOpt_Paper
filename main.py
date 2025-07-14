@@ -5,6 +5,7 @@ import numpy as np
 import random
 import data_inizialization as di
 import networkx as nx
+from collections import defaultdict
 
 
 # ================================
@@ -61,7 +62,7 @@ BO = ["E433"] # old electric bus types set
 C = ["c1"] # charging type set   # In the base case |C| = 1 -> c = 1 -> we just have one charging type -> In the random cases, so modified base cases -> we several c types
 
 # BUS INPUTS
-capacities = [153, 87, 175, 130, 80] #starting from electric and then non battery vehicles
+capacities = [90, 87, 85, 70, 80] #starting from electric and then non battery vehicles
 
 cap_b = {node: cap for node, cap in zip(B + V, capacities)} # passenger capacity of respective bus-types              # ASK PROFESSOR!!!!! -> IMPLEMENTING WITH ARRAY OR WITH DICTIONARY!!!!!!!!!!!!!!!!!!!!!!!!!
 d_b_MAX = {"E433":15, "E420":25, "E302":20} # driving range of fully charged b_bus_types-type electric bus
@@ -93,10 +94,17 @@ ccc_j = 5000 # CAPITAL COST of one charger at stop j
 vcc_j = 500 # VARIABLE COST of one charger at stop j
 ccps_t = 200000 # CAPITAL COST of a power station at t
 cl_tj = 5000 # cost of linking power station spot t and stop j -> cl_tj = 0 if t is old and j has an old charger stop
-cc_uoc_pairs = [            # pairs for cc = capital cost upper limit (used in (2)) and for uoc = operating cost upper limit (used in (3))
-    (1e7, 5e6),
+cc_uoc_pairs = [
+    (1.07e8, 5e6),
     (1.5e7, 7e6),
-    (2e7, 1e7),
+    (2e7, 1.07e7),
+    (3e7, 1.5e7),
+    (4e7, 2e7),
+    (1.8e7, 9e6),
+    (2.2e7, 1.1e7),
+    (2.4e7, 1.2e7),
+    (2.6e7, 1.3e7),
+    (2.8e7, 1.4e7)
 ]
 
 csta_j = 100000 # capital cost of a recharging station at stop j (considered constant for all j)
@@ -210,16 +218,17 @@ nob_rbc = {
     "r4": {"E433": {"c1":2}},
 } # number of old b-type electric buses on route r
 
-dem_r = {}  # passenger demand of route r = past passenger capacity of all route r vehicles
-            
-# Calculate the passenger demand for each route
-for r in set(nv_rb_0.keys()).union(nob_rb.keys()):
+dem_r = {}  # Total passenger capacity for each route
+
+# Loop over all relevant routes
+for r in sorted(set(nv_rb_0.keys()).union(nob_rb.keys())):
     dem = 0
-    # Add capacities from non-battery buses
+
+    # Add non-battery vehicle capacities
     for b, n in nv_rb_0.get(r, {}).items():
         dem += cap_b.get(b, 0) * n
 
-    # Add capacities from old electric buses
+    # Add old electric bus capacities
     for b, n in nob_rb.get(r, {}).items():
         dem += cap_b.get(b, 0) * n
 
@@ -286,10 +295,16 @@ for r in R:
             scenarios = di.generate_feasible_scenarios(r, stops, stop_dists, b, c, d_b_MAX[b])
             for idx, s in enumerate(scenarios, 1):
                 S_rbc_s[(r, b, c, idx)] = list(s)
-
+'''
 # transpose to change the order of the axis and respect the roder of the inputs (r,b,c)
 n_rbc_data = n_rbc_data_2d[:, :, np.newaxis].transpose(1, 0, 2) #just this case since we need also a c dimensione even if it is just 1
 n_rbc = di.init_n_rbc(n_rbc_data, R, B, C) # Initialize n_rbc with data from data_inizialization module
+'''
+
+n_rbc = defaultdict(int)
+for (r, b, c, s) in S_rbc_s:
+    n_rbc[(r, b, c)] = max(n_rbc[(r, b, c)], s)
+
 
 # Define R_jc
 R_jc = di.compute_all_R_jc(S_rbc_s)
@@ -1015,13 +1030,10 @@ if ILP_Model.status == gb.GRB.INFEASIBLE:
     ILP_Model.computeIIS()
     ILP_Model.write("model.ilp")
 
-'''
+
 for v in ILP_Model.getVars():
     print(f"{v.VarName}: {v.X}")
-'''
 
-print(dem_r)
-print(dem_0_r)
 
 '''
 for c in ILP_Model.getConstrs():
