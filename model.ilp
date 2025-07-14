@@ -1,48 +1,47 @@
 \ Model Electric_Bus_Model_copy
 \ LP format - for model browsing. Use MPS format to capture full model detail.
-\ Signature: 0xb0757e0688af6602
+\ Signature: 0x48fd33402edc694c
 Maximize
  
 Subject To
  Constraint_4_Stop2: 260 nc_jc[Stop2,c1] - 800 beta_t[Stop2] <= 0
- Constraint_12_r4: 153 nb_rbc[r4,E433,c1] + 87 nb_rbc[r4,E420,c1]
-   - 210 y_r[r4] + 80 nv_rb[r4,M104] >= 0
- Constraint_29_r4: - 4 nb_rbc[r4,E433,c1] - 4 nb_rbc[r4,E420,c1]
-   + 20 y_r[r4] - 4 nv_rb[r4,M104] >= 8
- Constraint_31_Stop2_c1: nc_jc[Stop2,c1] - C394 - C396 - C399 - C402 = 0
- Constraint_32_Stop2_r4_c1: - nb_rbc[r4,E433,c1] - nb_rbc[r4,E420,c1]
-   + nc_jrc_b[Stop2,r4,c1] = 2
+ Constraint_17_r2_E433_c1: nb_rbc[r2,E433,c1] - y_rbc[r2,E433,c1] >= 0
+ Constraint_24_r2: - y_rbc[r2,E433,c1] + y_r[r2] <= 0
+ Constraint_29_r2: - 18 nb_rbc[r2,E433,c1] + 60 y_r[r2] - 18 nv_rb[r2,M103]
+   - 18 nv_rb[r2,M104] >= 18
+ Constraint_31_Stop2_c1: nc_jc[Stop2,c1] - C395 - C396 - C399 - C403 = 0
  Constraint_32_Stop2_r2_c1: - nb_rbc[r2,E433,c1] + nc_jrc_b[Stop2,r2,c1]
    = 1
- Constraint_35_Stop2_r4_c1: - 15 eta_jrc_1[Stop2,r4,c1] + C402
-   - nc_jrc_ct[Stop2,r4,c1] >= -15
+ Constraint_32_Stop2_r4_c1: - nb_rbc[r4,E433,c1] - nb_rbc[r4,E420,c1]
+   + nc_jrc_b[Stop2,r4,c1] = 2
  Constraint_35_Stop2_r2_c1: - 15 eta_jrc_1[Stop2,r2,c1] + C396
    - nc_jrc_ct[Stop2,r2,c1] >= -15
- Constraint_36_Stop2_r4_c1: - 15 eta_jrc_2[Stop2,r4,c1] + C402
-   - nc_jrc_b[Stop2,r4,c1] >= -15
+ Constraint_35_Stop2_r4_c1: - 15 eta_jrc_1[Stop2,r4,c1] + C403
+   - nc_jrc_ct[Stop2,r4,c1] >= -15
  Constraint_36_Stop2_r2_c1: - 15 eta_jrc_2[Stop2,r2,c1] + C396
    - nc_jrc_b[Stop2,r2,c1] >= -15
- Constraint_37_Stop2_r4_c1: eta_jrc_1[Stop2,r4,c1] + eta_jrc_2[Stop2,r4,c1]
-   = 1
+ Constraint_36_Stop2_r4_c1: - 15 eta_jrc_2[Stop2,r4,c1] + C403
+   - nc_jrc_b[Stop2,r4,c1] >= -15
  Constraint_37_Stop2_r2_c1: eta_jrc_1[Stop2,r2,c1] + eta_jrc_2[Stop2,r2,c1]
    = 1
- Constraint_40_Stop2_r4_c1_E420: nc_jrc_ct[Stop2,r4,c1] >= 7
+ Constraint_37_Stop2_r4_c1: eta_jrc_1[Stop2,r4,c1] + eta_jrc_2[Stop2,r4,c1]
+   = 1
  Constraint_40_Stop2_r2_c1_E433: nc_jrc_ct[Stop2,r2,c1] >= 2
+ Constraint_40_Stop2_r4_c1_E420: nc_jrc_ct[Stop2,r4,c1] >= 7
 Bounds
- nb_rbc[r4,E433,c1] free
+ nb_rbc[r2,E433,c1] free
  nc_jc[Stop2,c1] free
- -infinity <= nv_rb[r4,M104] <= 1
  C396 free
- C402 free
+ C403 free
  nc_jrc_b[Stop2,r2,c1] free
  nc_jrc_b[Stop2,r4,c1] free
  nc_jrc_ct[Stop2,r2,c1] free
  nc_jrc_ct[Stop2,r4,c1] free
 Binaries
- y_r[r4] beta_t[Stop2] eta_jrc_1[Stop2,r2,c1] eta_jrc_1[Stop2,r4,c1]
- eta_jrc_2[Stop2,r2,c1] eta_jrc_2[Stop2,r4,c1]
+ y_rbc[r2,E433,c1] y_r[r2] beta_t[Stop2] eta_jrc_1[Stop2,r2,c1]
+ eta_jrc_1[Stop2,r4,c1] eta_jrc_2[Stop2,r2,c1] eta_jrc_2[Stop2,r4,c1]
 Generals
  nb_rbc[r2,E433,c1] nb_rbc[r4,E433,c1] nb_rbc[r4,E420,c1] nc_jc[Stop2,c1]
- nv_rb[r4,M104] C394 C396 C399 C402 nc_jrc_b[Stop2,r2,c1]
+ nv_rb[r2,M103] nv_rb[r2,M104] C395 C396 C399 C403 nc_jrc_b[Stop2,r2,c1]
  nc_jrc_b[Stop2,r4,c1] nc_jrc_ct[Stop2,r2,c1] nc_jrc_ct[Stop2,r4,c1]
 End
