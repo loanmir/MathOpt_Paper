@@ -3,27 +3,21 @@ import numpy as np
 import math
 import networkx as nx
 
-def init_n_rbc(n_rbc_data, r_set, b_set, c_set):
+# Distance function (assumes direct edges)
+def get_distance(G: nx.Graph, u, v):
+    """Return the direct edge distance if it exists; otherwise, compute shortest path distance."""
+    if G.has_edge(u, v):
+        return G[u][v]['distance']
+    try:
+        path = nx.shortest_path(G, u, v, weight='distance')
+        return sum(G[path[i]][path[i+1]]['distance'] for i in range(len(path)-1))
+    except nx.NetworkXNoPath:
+        raise ValueError(f"No path exists between {u} and {v}")
 
-    """
-    Initialize the n_rbc dictionary with data from n_rbc_data.
-    n_rbc_data is expected to be a matrix with 3 dimensions,
-    where the first dimension corresponds to r_set, the second to b_set, and the third to c_set.
-    """
 
-    # Create mapping from label to index
-    r_idx = {r: i for i, r in enumerate(r_set)}
-    b_idx = {b: i for i, b in enumerate(b_set)}
-    c_idx = {c: i for i, c in enumerate(c_set)}
-
-    n_rbc = {}
-
-    for r in r_set:
-        for b in b_set:
-            for c in c_set:
-                n_rbc[(r, b, c)] = n_rbc_data[r_idx[r], b_idx[b], c_idx[c]]
-
-    return n_rbc
+def get_middle_value_of_set(s:list):
+    middle = s[len(s) // 2]
+    return middle
 
 
 

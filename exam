@@ -66,3 +66,5 @@ thing to do for 07-08/07/2025
 -Rumiz: nc_jrc_max and the other one
     -IMPORTANT: CHECK ALL CONTRAINTS BECAUSE SOME ARE DISAPPEARING IN DEBUGGING (ESPECIALLY IN THE DECLARATION OF VARIVABLES)
 -Lucas: R_jc, L_r and nob_rbc
+
+IDEA: using 2 contructors, 1 with csv and 1 with normal inputs.
