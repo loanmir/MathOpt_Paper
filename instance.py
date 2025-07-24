@@ -573,7 +573,7 @@ class OptimizationInstance:
                                 name=f"Constraint_62_a_{j}_{r}_{c}"
                             )
                             self.model.addConstr(
-                                self.nc_jrc_b[j, r, c] <= gp.quicksum(
+                                self.nc_jrc_b[j, r, c] <= gb.quicksum(
                                     self.ub_rb[r][b] + self.nob_rb[r].get(b, 0) for b in self.B_r[r]),
                                 name=f"Constraint_62_b_{j}_{r}_{c}"
                             )
