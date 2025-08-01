@@ -1,5 +1,11 @@
 import gurobipy as gb
+import data_inizialization as di
 from gurobipy import Model
+from data import G, R, D, N, NO, T, T_j, TO, TO_j, V, B, BO, C, cap_b, B_r, C_b, pi_r, dem_r, dem_0_r, ub_rb, nv_rb_0, V_r, co_b, n_rbc, cc_uoc_pairs, csta_j, ccp_c, cbus_b, ccps_t, cl_tj, vcc_j, vcp_c, vcb_rb, nod_jc, utp_t, p_c, up_j, nop_jc, uc_c, R_jc, L_r, ut_r, lt_r, nob_rb, nob_rbc, B_rc, ct_rjbc, nc_jrc_max, noc_jrc_ct, S_rbc_s
+
+# REMEMBER!! -> Most of data will be taken from the data.py file -> So we will need to remove the "self." every time we access some input(CONSTANT)
+# For the "dynamic inputs", so the one we can define as we wish -> They must be constructed within the constructor "__init_", and so they will be accessed through self.!!
+
 
 class OptimizationInstance:
     def __init__(self, R, B_r, C_b, B, C, N, D, NO, pi_r, T, dem_r, ub_rb, nv_rb_0, V_r, co_b, n_rbc):
@@ -15,11 +21,13 @@ class OptimizationInstance:
         self._define_constraints()
 
     def _define_variables(self):
+        '''
         R, B_r, C_b = self.R, self.B_r, self.C_b
         B, C, N, D, NO = self.B, self.C, self.N, self.D, self.NO
         pi_r, T, dem_r = self.pi_r, self.T, self.dem_r
         ub_rb, nv_rb_0, V_r, co_b = self.ub_rb, self.nv_rb_0, self.V_r, self.co_b
         n_rbc = self.n_rbc
+        '''
 
         self.nb_rbc = self.model.addVars(
             [(r, b, c) for r in R for b in B_r[r] for c in C_b[b]],
@@ -81,36 +89,36 @@ class OptimizationInstance:
         m = self.model
 
         # Constraint (2)
-        for cc, uoc in self.cc_uoc_pairs:
+        for cc, uoc in cc_uoc_pairs:
             m.addConstr(
                 (
-                        gb.quicksum(self.csta_j[j] * self.ns_j[j] for j in self.N) +
-                        gb.quicksum(self.ccp_c * self.np_jc[j, c] for j in self.N for c in self.C) +
+                        gb.quicksum(csta_j[j] * self.ns_j[j] for j in self.N) +
+                        gb.quicksum(ccp_c * self.np_jc[j, c] for j in self.N for c in self.C) +
                         gb.quicksum(gb.quicksum(
-                            self.cbus_b[b] * gb.quicksum(self.nb_rbc[r, b, c] for c in self.C_b[b]) for b in
+                            cbus_b[b] * gb.quicksum(self.nb_rbc[r, b, c] for c in self.C_b[b]) for b in
                             self.B_r[r]) for r in self.R) +
-                        gb.quicksum(self.ccps_t * self.beta_t[t] for t in self.T if t not in self.TO) +
+                        gb.quicksum(ccps_t * self.beta_t[t] for t in self.T if t not in TO) +
                         gb.quicksum(
-                            gb.quicksum(self.cl_tj[t, j] * self.gamma_tj[t, j] for j in self.N if j not in self.NO) for
-                            t in self.T if t not in self.TO)
+                            gb.quicksum(cl_tj[t, j] * self.gamma_tj[t, j] for j in self.N if j not in self.NO) for
+                            t in self.T if t not in TO)
                 ) <= cc,
                 name="capital_cost_constraint"
             )
 
         # Constraint (3)
-        for cc, uoc in self.cc_uoc_pairs:
+        for cc, uoc in cc_uoc_pairs:
             m.addConstr(
                 (
-                        gb.quicksum(self.csta_j[j] * self.ns_j[j] for j in self.N) +
-                        gb.quicksum(self.ccp_c * self.np_jc[j, c] for j in self.N for c in self.C) +
+                        gb.quicksum(csta_j[j] * self.ns_j[j] for j in self.N) +
+                        gb.quicksum(ccp_c * self.np_jc[j, c] for j in self.N for c in self.C) +
                         gb.quicksum(gb.quicksum(
-                            self.cbus_b[b] * gb.quicksum(self.nb_rbc[r, b, c] for c in self.C_b[b]) for b in
+                            cbus_b[b] * gb.quicksum(self.nb_rbc[r, b, c] for c in self.C_b[b]) for b in
                             self.B_r[r]) for r in self.R) +
-                        gb.quicksum(self.ccps_t * self.beta_t[t] for t in self.T if t not in self.TO) +
+                        gb.quicksum(ccps_t * self.beta_t[t] for t in self.T if t not in TO) +
                         gb.quicksum(
-                            self.vcc_j[j] * self.ns_j[j] + gb.quicksum(self.vcp_c * self.np_jc[j, c] for c in self.C)
+                            vcc_j[j] * self.ns_j[j] + gb.quicksum(vcp_c * self.np_jc[j, c] for c in self.C)
                             for j in self.N) +
-                        gb.quicksum(gb.quicksum(self.vcb_rb[r][b] for b in self.B_r[r]) for r in self.R)
+                        gb.quicksum(gb.quicksum(vcb_rb[r][b] for b in self.B_r[r]) for r in self.R)
                 ) <= uoc,
                 name="variable_cost_constraint"
             )
@@ -118,8 +126,8 @@ class OptimizationInstance:
         # Constraint (4)
         for j in self.N:
             m.addConstr(
-                gb.quicksum((self.nc_jc[j, c] + self.nod_jc[j, c]) * self.p_c for c in self.C) <=
-                gb.quicksum(self.utp_t * self.beta_t[t] for t in self.T_j[j]),
+                gb.quicksum((self.nc_jc[j, c] + nod_jc[j, c]) * p_c for c in self.C) <=
+                gb.quicksum(utp_t * self.beta_t[t] for t in T_j[j]),
                 name=f"Constraint_4_{j}"
             )
 
@@ -132,14 +140,14 @@ class OptimizationInstance:
 
         # Constraint (6)
         for r in self.R:
-            for b in (bus for bus in self.BO if bus in self.B_r[r]):
+            for b in (bus for bus in BO if bus in self.B_r[r]):
                 m.addConstr(
                     gb.quicksum(self.y_rbc[r, b, c] - self.y_rbco_b[r, b, self.co_b[b][0]] for c in self.C_b[b]) <= 0,
                     name=f"Constraint_6_{r}_{b}"
                 )
 
         # Constraint (7)
-        for b in (b for b in self.B if b not in self.BO):
+        for b in (b for b in self.B if b not in BO):
             for c in self.C_b[b]:
                 m.addConstr(
                     self.y_bc[b, c] <= gb.quicksum(self.y_rbc[r, b, c] for r in self.R if (r, b, c) in self.y_rbc),
@@ -148,7 +156,7 @@ class OptimizationInstance:
 
         # Constraint (8)
         R_size = len(self.R)
-        for b in (b for b in self.B if b not in self.BO):
+        for b in (b for b in self.B if b not in BO):
             for c in self.C_b[b]:
                 m.addConstr(
                     R_size * self.y_bc[b, c] >= gb.quicksum(
@@ -157,7 +165,7 @@ class OptimizationInstance:
                 )
 
         # Constraint (9)
-        for b in (b for b in self.B if b not in self.BO):
+        for b in (b for b in self.B if b not in BO):
             m.addConstr(
                 gb.quicksum(self.y_bc[b, c] for c in self.C_b[b]) <= 1,
                 name=f"Constraint_9_{b}"
@@ -166,8 +174,8 @@ class OptimizationInstance:
         # Constraint (10)
         for j in self.N:
             m.addConstr(
-                gb.quicksum(self.np_jc[j, c] for c in self.C) + gb.quicksum(self.nop_jc[j, c] for c in self.C) <=
-                self.up_j[j],
+                gb.quicksum(self.np_jc[j, c] for c in self.C) + gb.quicksum(nop_jc[j, c] for c in self.C) <=
+                up_j[j],
                 name=f"Constraint_10_{j}"
             )
 
@@ -183,8 +191,8 @@ class OptimizationInstance:
         for r in self.R:
             m.addConstr(
                 gb.quicksum(
-                    self.cap_b[b] * gb.quicksum(self.nb_rbc[r, b, c] for c in self.C_b[b]) for b in self.B_r[r]) +
-                gb.quicksum(self.cap_b[b] * self.nv_rb[r, b] for b in self.V_r[r]) >= self.dem_0_r[r] * self.y_r[r],
+                    cap_b[b] * gb.quicksum(self.nb_rbc[r, b, c] for c in self.C_b[b]) for b in self.B_r[r]) +
+                gb.quicksum(cap_b[b] * self.nv_rb[r, b] for b in self.V_r[r]) >= dem_0_r[r] * self.y_r[r],
                 name=f"Constraint_12_{r}"
             )
 
@@ -210,14 +218,14 @@ class OptimizationInstance:
         for r in self.R:
             self.model.addConstr(
                 self.Z_r[r] <= gb.quicksum(
-                    self.cap_b[b] * gb.quicksum(self.nb_rbc[r, b, c] for c in self.C_b[b]) for b in self.B_r[r]),
+                    cap_b[b] * gb.quicksum(self.nb_rbc[r, b, c] for c in self.C_b[b]) for b in self.B_r[r]),
                     name=f"Constraint_15_{r}"
             )
 
         # Constraint (16)
         for r in self.R:
             self.model.addConstr(
-                self.Z_r[r] <= self.dem_0_r[r] * self.y_r[r],
+                self.Z_r[r] <= dem_0_r[r] * self.y_r[r],
                 name=f"Constraint_16_{r}"
             )
 
@@ -250,14 +258,14 @@ class OptimizationInstance:
         # Constraint (20)
         for j in (j for j in self.N if j not in self.NO):
             self.model.addConstr(
-                self.ns_j[j] <= gb.quicksum(self.np_jc[j, c] + self.nop_jc[j, c] for c in self.C),
+                self.ns_j[j] <= gb.quicksum(self.np_jc[j, c] + nop_jc[j, c] for c in self.C),
                 name=f"Constraint_20_{j}"
             )
 
         # Constraint (21)
         for j in (j for j in self.N if j not in self.NO):
             self.model.addConstr(
-                 self.up_j[j] * self.ns_j[j] >= gb.quicksum(self.np_jc[j, c] + self.nop_jc[j, c] for c in self.C),
+                 up_j[j] * self.ns_j[j] >= gb.quicksum(self.np_jc[j, c] + nop_jc[j, c] for c in self.C),
                 name=f"Constraint_21_{j}"
             )
 
@@ -265,15 +273,15 @@ class OptimizationInstance:
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
                 self.model.addConstr(
-                    self.np_jc[j, c] >= ((self.nc_jc[j, c] + self.nod_jc[j, c]) / self.uc_c[c]) - self.nop_jc[j, c],
+                    self.np_jc[j, c] >= ((self.nc_jc[j, c] + nod_jc[j, c]) / uc_c[c]) - nop_jc[j, c],
                     name=f"Constraint_22_{j}_{c}"
                 )
 
         # Constraint (23)
         for j in (j for j in self.N if j not in self.D):
             self.model.addConstr(
-                gb.quicksum(self.np_jc[j, c] for c in self.C) + gb.quicksum(self.nop_jc[j, c] for c in self.C) <=
-                self.up_j[j],
+                gb.quicksum(self.np_jc[j, c] for c in self.C) + gb.quicksum(nop_jc[j, c] for c in self.C) <=
+                up_j[j],
                 name=f"Constraint_23_{j}"
             )
 
@@ -298,14 +306,14 @@ class OptimizationInstance:
         for j in (j for j in self.D if j not in self.NO):
             for c in self.C:
                 self.model.addConstr(
-                    self.alpha_jc[j, c] <= gb.quicksum(self.y_r[r] for r in self.R_jc.get((j, c), [])),
+                    self.alpha_jc[j, c] <= gb.quicksum(self.y_r[r] for r in R_jc.get((j, c), [])),
                     name=f"Constraint_26_{j}_{c}"
                 )
 
         # Constraint (27)
         for j in (j for j in self.D if j not in self.NO):
             for c in self.C:
-                R_jc_list = self.R_jc.get((j, c), [])
+                R_jc_list = R_jc.get((j, c), [])
                 self.model.addConstr(
                     len(R_jc_list) * self.alpha_jc[j, c] >= gb.quicksum(self.y_r[r] for r in R_jc_list),
                     name=f"Constraint_27_{j}_{c}"
@@ -313,9 +321,9 @@ class OptimizationInstance:
 
         # Constraint (28)
         for r in self.R:
-            self.model.addConstr(self.L_r[r] * self.y_r[r] <= self.ut_r[r] * (
+            self.model.addConstr(L_r[r] * self.y_r[r] <= ut_r[r] * (
                         gb.quicksum(
-                            gb.quicksum(self.nb_rbc[r, b, c] + self.nob_rb.get(r, {}).get(b, 0)
+                            gb.quicksum(self.nb_rbc[r, b, c] + nob_rb.get(r, {}).get(b, 0)
                                 for c in self.C_b[b])
                                     for b in self.B_r[r]
                                 ) + gb.quicksum(self.nv_rb[r, b] for b in self.V_r[r])),
@@ -324,8 +332,8 @@ class OptimizationInstance:
 
         # Constraint (29)
         for r in self.R:
-            self.model.addConstr(self.L_r[r] * self.y_r[r] >= self.lt_r[r] * (
-                gb.quicksum(gb.quicksum(self.nb_rbc[r, b, c] + self.nob_rb.get(r, {}).get(b, 0)
+            self.model.addConstr(L_r[r] * self.y_r[r] >= lt_r[r] * (
+                gb.quicksum(gb.quicksum(self.nb_rbc[r, b, c] + nob_rb.get(r, {}).get(b, 0)
                 for c in self.C_b[b]) for b in self.B_r[r]) + gb.quicksum(self.nv_rb[r, b] for b in self.V_r[r])),
                 name=f"Constraint_29_{r}"
             )
@@ -334,7 +342,7 @@ class OptimizationInstance:
         for j in (j for j in self.D if j not in self.NO):
             for c in self.C:
                 self.model.addConstr(
-                    self.uc_c[c] * self.alpha_jc[j, c] - self.nc_jc[j, c] <= 0,
+                    uc_c[c] * self.alpha_jc[j, c] - self.nc_jc[j, c] <= 0,
                     name=f"Constraint_30_{j}_{c}"
                 )
 
@@ -342,24 +350,24 @@ class OptimizationInstance:
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
                 self.model.addConstr(
-                    self.nc_jc[j, c] == gb.quicksum(self.nc_jrc[j, r, c] - self.nod_jc[j, c] for r in self.R_jc.get((j, c), [])),
+                    self.nc_jc[j, c] == gb.quicksum(self.nc_jrc[j, r, c] - nod_jc[j, c] for r in R_jc.get((j, c), [])),
                     name=f"Constraint_31_{j}_{c}"
                 )
 
         # Constraint (32)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
-                for r in self.R_jc.get((j, c), []):
+                for r in R_jc.get((j, c), []):
                     self.model.addConstr(self.nc_jrc_b[j, r, c] ==
-                        gb.quicksum(self.nb_rbc[r, b, c] + self.nob_rbc.get(r, {}).get(b, {}).get(c, 0)
-                        for b in self.B_rc[r][c]),
+                        gb.quicksum(self.nb_rbc[r, b, c] + nob_rbc.get(r, {}).get(b, {}).get(c, 0)
+                        for b in B_rc[r][c]),
                         name=f"Constraint_32_{j}_{r}_{c}"
                     )
 
         # Constraint (33)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
-                for r in self.R_jc.get((j, c), []):
+                for r in R_jc.get((j, c), []):
                     self.model.addConstr(
                         self.nc_jrc[j, r, c] <= self.nc_jrc_ct[j, r, c],
                         name=f"Constraint_33_{j}_{r}_{c}"
@@ -368,7 +376,7 @@ class OptimizationInstance:
         # Constraint (34)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
-                for r in self.R_jc.get((j, c), []):
+                for r in R_jc.get((j, c), []):
                     self.model.addConstr(
                         self.nc_jrc[j, r, c] <= self.nc_jrc_b[j, r, c],
                         name=f"Constraint_34_{j}_{r}_{c}"
@@ -377,26 +385,26 @@ class OptimizationInstance:
         # Constraint (35)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
-                for r in self.R_jc.get((j, c), []):
+                for r in R_jc.get((j, c), []):
                     self.model.addConstr(
-                        self.nc_jrc[j, r, c] >= self.nc_jrc_ct[j, r, c] - self.up_j[j] * self.uc_c[c] * (1 - self.eta_jrc_1[j, r, c]),
+                        self.nc_jrc[j, r, c] >= self.nc_jrc_ct[j, r, c] - up_j[j] * uc_c[c] * (1 - self.eta_jrc_1[j, r, c]),
                         name=f"Constraint_35_{j}_{r}_{c}"
                     )
 
         # Constraint (36)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
-                for r in self.R_jc.get((j, c), []):
+                for r in R_jc.get((j, c), []):
                     self.model.addConstr(
                         self.nc_jrc[j, r, c] >= self.nc_jrc_b[j, r, c] -
-                        self.up_j[j] * self.uc_c[c] * (1 - self.eta_jrc_2[j, r, c]),
+                        up_j[j] * uc_c[c] * (1 - self.eta_jrc_2[j, r, c]),
                         name=f"Constraint_36_{j}_{r}_{c}"
                     )
 
         # Constraint (37)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
-                for r in self.R_jc.get((j, c), []):
+                for r in R_jc.get((j, c), []):
                     self.model.addConstr(
                         self.eta_jrc_1[j, r, c] + self.eta_jrc_2[j, r, c] == 1,
                         name=f"Constraint_37_{j}_{r}_{c}"
@@ -405,52 +413,52 @@ class OptimizationInstance:
         # Constraint (38)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
-                for r in self.R_jc.get((j, c), []):
-                    for b in self.B_rc[r][c]:
+                for r in R_jc.get((j, c), []):
+                    for b in B_rc[r][c]:
                         self.model.addConstr(
-                            self.nc_jrc_ct[j, r, c] >= (self.ct_rjbc[r][j][b][c] * self.y_jrbc[j, r, b, c]) / self.lt_r[r],
+                            self.nc_jrc_ct[j, r, c] >= (ct_rjbc[r][j][b][c] * self.y_jrbc[j, r, b, c]) / lt_r[r],
                             name=f"Constraint_38_{j}_{r}_{c}_{b}"
                         )
 
         # Constraint (39)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
-                for r in self.R_jc.get((j, c), []):
-                    for b in self.B_rc[r][c]:
+                for r in R_jc.get((j, c), []):
+                    for b in B_rc[r][c]:
                         self.model.addConstr(
                             self.nc_jrc_ct[j, r, c] <= (
-                                (self.ct_rjbc[r][j][b][c] * self.y_jrbc[j, r, b, c]) / self.lt_r[r] +
-                                self.nc_jrc_max[j][r][c] * (1 - self.xi_jrcb.get((j, r, b, c), 0))),
+                                (ct_rjbc[r][j][b][c] * self.y_jrbc[j, r, b, c]) / lt_r[r] +
+                                nc_jrc_max[j][r][c] * (1 - self.xi_jrcb.get((j, r, b, c), 0))),
                                 name=f"Constraint_39_{j}_{r}_{c}_{b}"
                         )
 
         # Constraint (40)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
-                for r in self.R_jc.get((j, c), []):
-                    for b in self.B_rc[r][c]:
+                for r in R_jc.get((j, c), []):
+                    for b in B_rc[r][c]:
                         self.model.addConstr(
-                            self.nc_jrc_ct[j, r, c] >= self.noc_jrc_ct[j][r][c],
+                            self.nc_jrc_ct[j, r, c] >= noc_jrc_ct[j][r][c],
                             name=f"Constraint_40_{j}_{r}_{c}_{b}"
                         )
 
         # Constraint (41)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
-                for r in self.R_jc.get((j, c), []):
-                    for b in self.B_rc[r][c]:
+                for r in R_jc.get((j, c), []):
+                    for b in B_rc[r][c]:
                         self.model.addConstr(
                             self.nc_jrc_ct[j, r, c] <= (
-                            self.noc_jrc_ct[j][r][c] + self.nc_jrc_max[j][r][c] * (1 - self.xi_jrc[j, r, c])),
+                            noc_jrc_ct[j][r][c] + nc_jrc_max[j][r][c] * (1 - self.xi_jrc[j, r, c])),
                             name=f"Constraint_41_{j}_{r}_{c}_{b}"
                         )
 
         # Constraint (42)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
-                for r in self.R_jc.get((j, c), []):
+                for r in R_jc.get((j, c), []):
                     self.model.addConstr(
-                        self.xi_jrc[j, r, c] + gb.quicksum(self.xi_jrcb[j, r, c, b] for b in self.B_rc[r][c]) == 1,
+                        self.xi_jrc[j, r, c] + gb.quicksum(self.xi_jrcb[j, r, c, b] for b in B_rc[r][c]) == 1,
                         name=f"Constraint_42_{j}_{c}_{r}"
                     )
 
@@ -470,14 +478,14 @@ class OptimizationInstance:
             for b in self.B_r[r]:
                 for c in self.C_b[b]:
                     for s in range(1, self.n_rbc[r, b, c] + 1):
-                        predecessors = self.S_rbc_s[(r, b, c, s)]
+                        predecessors = S_rbc_s[(r, b, c, s)]
                         self.model.addConstr(
-                            gb.quicksum(self.y_jrbc_s[j, r, b, c, s] for j in predecessors) == self.di.compute_l_rbc_s(self.S_rbc_s)[r, b, c, s] * self.y_rbc_s[r, b, c, s],
+                            gb.quicksum(self.y_jrbc_s[j, r, b, c, s] for j in predecessors) == di.compute_l_rbc_s(S_rbc_s)[r, b, c, s] * self.y_rbc_s[r, b, c, s],
                             name=f"Constraint_44_{r}_{b}_{c}_{s}"
                         )
 
         # Constraint (45)
-        for t in self.TO:
+        for t in TO:
             self.model.addConstr(
                 self.beta_t[t] == 1,
                 name=f"Constraint_45_{t}"
@@ -485,7 +493,7 @@ class OptimizationInstance:
 
         # Constraint (47)
         for j in self.NO:
-            for t in self.TO_j[j]:
+            for t in TO_j[j]:
                 self.model.addConstr(
                     self.gamma_tj[t, j] == 1,
                     name=f"Constraint_47_{t}_{j}"
@@ -499,7 +507,7 @@ class OptimizationInstance:
                     name=f"Constraint_53_a_{j}_{c}"
                 )
                 self.model.addConstr(
-                    self.nc_jc[j, c] <= (self.up_j[j] * self.uc_c[c] - self.nod_jc[j, c]),
+                    self.nc_jc[j, c] <= (up_j[j] * uc_c[c] - nod_jc[j, c]),
                     name=f"Constraint_53_b_{j}_{c}"
                 )
 
@@ -511,7 +519,7 @@ class OptimizationInstance:
                     name=f"Constraint_54_a_{j}_{c}"
                 )
                 self.model.addConstr(
-                    self.np_jc[j, c] <= (self.up_j[j] - self.nop_jc[j, c]),
+                    self.np_jc[j, c] <= (up_j[j] - nop_jc[j, c]),
                     name=f"Constraint_54_b_{j}_{c}"
                 )
 
@@ -523,7 +531,7 @@ class OptimizationInstance:
                     name=f"Constraint_55_a_{j}_{c}"
                 )
                 self.model.addConstr(
-                    self.nc_jc[j, c] <= (self.uc_c[c] - self.nod_jc[j, c]),
+                    self.nc_jc[j, c] <= (uc_c[c] - nod_jc[j, c]),
                     name=f"Constraint_55_b_{j}_{c}"
                 )
 
@@ -536,7 +544,7 @@ class OptimizationInstance:
                         name=f"Constraint_61_a_{j}_{r}_{c}"
                     )
                     self.model.addConstr(
-                        self.nc_jrc_ct[j, r, c] <= self.nc_jrc_max[j][r][c],
+                        self.nc_jrc_ct[j, r, c] <= nc_jrc_max[j][r][c],
                         name=f"Constraint_61_b_{j}_{r}_{c}"
                     )
 
@@ -549,7 +557,7 @@ class OptimizationInstance:
                         name=f"Constraint_62_a_{j}_{r}_{c}"
                     )
                     self.model.addConstr(
-                        self.nc_jrc_b[j, r, c] <= gb.quicksum(self.ub_rb[r][b] + self.nob_rb[r].get(b, 0) for b in self.B_r[r]),
+                        self.nc_jrc_b[j, r, c] <= gb.quicksum(self.ub_rb[r][b] + nob_rb[r].get(b, 0) for b in self.B_r[r]),
                         name=f"Constraint_62_b_{j}_{r}_{c}"
                     )
 
@@ -562,7 +570,7 @@ class OptimizationInstance:
                         name=f"Constraint_63_a_{j}_{r}_{c}"
                     )
                     self.model.addConstr(
-                        self.nc_jrc[j, r, c] <= min(self.up_j[j] * self.uc_c[c], self.nc_jrc_max[j][r][c]),
+                        self.nc_jrc[j, r, c] <= min(up_j[j] * uc_c[c], nc_jrc_max[j][r][c]),
                         name=f"Constraint_63_b_{j}_{r}_{c}"
                     )
 
@@ -572,7 +580,7 @@ class OptimizationInstance:
                 for c in self.C_b[b]:
                     for j in self.pi_r[r]:
                         for s in range(1, self.n_rbc[r, b, c] + 1):
-                            if j not in self.S_rbc_s[r, b, c, s]:
+                            if j not in S_rbc_s[r, b, c, s]:
                                 self.model.addConstr(
                                     self.y_jrbc_s[j, r, b, c, s] == 0,
                                     name=f"Constraint_65_jrbc_zero_r{r}_b{b}_c{c}_j{j}_s{s}"
