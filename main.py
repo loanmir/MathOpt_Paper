@@ -4,7 +4,23 @@ import gurobipy as gb
 import numpy as np
 import data_inizialization as di
 import networkx as nx
+from instance import OptimizationInstance
 
+instance = OptimizationInstance()
+model = instance.model
+model.optimize()
+
+if model.status == gb.GRB.INFEASIBLE:
+    print("Model is infeasible. Computing IIS...")
+    model.computeIIS()
+    model.write("model.ilp")
+
+
+for v in model.getVars():
+    print(f"{v.VarName}: {v.X}")
+
+
+'''
 
 # ================================
 # 1. GRAPH CREATION
@@ -230,11 +246,11 @@ for r in R:
             scenarios = di.generate_feasible_scenarios(r, stops, stop_dists, b, c, d_b_MAX[b])
             for idx, s in enumerate(scenarios, 1):
                 S_rbc_s[(r, b, c, idx)] = list(s)
-'''
+
 # transpose to change the order of the axis and respect the roder of the inputs (r,b,c)
 n_rbc_data = n_rbc_data_2d[:, :, np.newaxis].transpose(1, 0, 2) #just this case since we need also a c dimensione even if it is just 1
 n_rbc = di.init_n_rbc(n_rbc_data, R, B, C) # Initialize n_rbc with data from data_inizialization module
-'''
+
 # Define n_rbc
 n_rbc = {}
 
@@ -823,7 +839,7 @@ for j in NO:
 
 # (49)
 # Implemented directly in the variable declaration
-'''
+
 for r in R:
     ILP_Model.addConstr(
         Z_r[r] >= 0,
@@ -833,10 +849,10 @@ for r in R:
         Z_r[r] <= dem_r[r],
         name=f"Constraint_49_b_{r}"
     )
-'''
+
 # (50)
 # Implemented directly in the variable declaration!
-'''
+
 for r in R:
     for b in B_r[r]:
         for c in C_b[b]:
@@ -848,10 +864,10 @@ for r in R:
                 nb_rbc[r, b, c] <= ub_rb[r, b],
                 name=f"Constraint_50_b_{r}_{b}_{c}"
             )
-'''
+
 # (51)
 # Implemented directly in the variable declaration!
-'''for r in R:
+for r in R:
     for b in V_r[r]:
         ILP_Model.addConstr(
             nv_rb[r, b] >= 0,
@@ -861,7 +877,7 @@ for r in R:
             nv_rb[r, b] <= nv_rb_0[r, b],
             name=f"Constraint_51_b_{r}_{b}"
         )
-'''
+
 
 # (52)
 # Implemented directly in the variable declaration!
@@ -993,8 +1009,6 @@ if ILP_Model.status == gb.GRB.INFEASIBLE:
 for v in ILP_Model.getVars():
     print(f"{v.VarName}: {v.X}")
 
-
-'''
 for c in ILP_Model.getConstrs():
     if c.IISConstr:
         print(f"Infeasible Constraint: {c.ConstrName}")
