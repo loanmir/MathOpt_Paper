@@ -1,7 +1,7 @@
 import gurobipy as gb
 import data_inizialization as di
 from gurobipy import Model
-from data import G, R, D, N, NO, T, T_j, TO, TO_j, V, B, BO, C, cap_b, B_r, C_b, pi_r, dem_r, dem_0_r, ub_rb, nv_rb_0, V_r, co_b, n_rbc, cc_uoc_pairs, csta_j, ccp_c, cbus_b, ccps_t, cl_tj, vcc_j, vcp_c, vcb_rb, nod_jc, utp_t, p_c, up_j, nop_jc, uc_c, R_jc, L_r, ut_r, lt_r, nob_rb, nob_rbc, B_rc, ct_rjbc, nc_jrc_max, noc_jrc_ct, S_rbc_s
+from data import G, R, D, N, NO, T, T_j, TO, TO_j, B, BO, C, cap_b, B_r, C_b, pi_r, dem_r, dem_0_r, ub_rb, nv_rb_0, V_r, co_b, n_rbc, cc_uoc_pairs, csta_j, ccp_c, cbus_b, ccps_t, cl_tj, vcc_j, vcp_c, vcb_rb, nod_jc, utp_t, p_c, up_j, nop_jc, uc_c, R_jc, L_r, ut_r, lt_r, nob_rb, nob_rbc, B_rc, ct_rjbc, nc_jrc_max, noc_jrc_ct, S_rbc_s
 
 # REMEMBER!! -> Most of data will be taken from the data.py file -> So we will need to remove the "self." every time we access some input(CONSTANT)
 # For the "dynamic inputs", so the one we can define as we wish -> They must be constructed within the constructor "__init_", and so they will be accessed through self.!!
@@ -20,6 +20,7 @@ class OptimizationInstance:
 
         self._define_variables()
         self._define_constraints()
+        self._set_objective()
 
     def _define_variables(self):
         '''
@@ -124,14 +125,14 @@ class OptimizationInstance:
         for cc, uoc in cc_uoc_pairs:
             m.addConstr(
                 (
-                        gb.quicksum(csta_j[j] * self.ns_j[j] for j in N) +
+                        gb.quicksum(csta_j * self.ns_j[j] for j in N) +
                         gb.quicksum(ccp_c * self.np_jc[j, c] for j in N for c in C) +
                         gb.quicksum(gb.quicksum(
                             cbus_b[b] * gb.quicksum(self.nb_rbc[r, b, c] for c in C_b[b]) for b in
                             B_r[r]) for r in R) +
                         gb.quicksum(ccps_t * self.beta_t[t] for t in T if t not in TO) +
                         gb.quicksum(
-                            gb.quicksum(cl_tj[t, j] * self.gamma_tj[t, j] for j in N if j not in NO) for
+                            gb.quicksum(cl_tj * self.gamma_tj[t, j] for j in N if j not in NO) for
                             t in T if t not in TO)
                 ) <= cc,
                 name="capital_cost_constraint"
@@ -141,14 +142,14 @@ class OptimizationInstance:
         for cc, uoc in cc_uoc_pairs:
             m.addConstr(
                 (
-                        gb.quicksum(csta_j[j] * self.ns_j[j] for j in N) +
+                        gb.quicksum(csta_j * self.ns_j[j] for j in N) +
                         gb.quicksum(ccp_c * self.np_jc[j, c] for j in N for c in C) +
                         gb.quicksum(gb.quicksum(
                             cbus_b[b] * gb.quicksum(self.nb_rbc[r, b, c] for c in C_b[b]) for b in
                             B_r[r]) for r in R) +
                         gb.quicksum(ccps_t * self.beta_t[t] for t in T if t not in TO) +
                         gb.quicksum(
-                            vcc_j[j] * self.ns_j[j] + gb.quicksum(vcp_c * self.np_jc[j, c] for c in C)
+                            vcc_j * self.ns_j[j] + gb.quicksum(vcp_c * self.np_jc[j, c] for c in C)
                             for j in N) +
                         gb.quicksum(gb.quicksum(vcb_rb[r][b] for b in B_r[r]) for r in R)
                 ) <= uoc,
@@ -622,4 +623,16 @@ class OptimizationInstance:
     # Solving method
     def solve(self):
         self.model.optimize()
+        if self.model.status == gb.GRB.INFEASIBLE:
+            self.model.computeIIS()
+            self.model.write("model.ilp")  # Optional: write model to inspect later
+            self.infeasible_constraints = [
+                c for c in self.model.getConstrs() if c.IISConstr
+            ]
+        else:
+            self.infeasible_constraints = []
+
         return self.model
+
+    def get_solution_values(self):
+        return {v.VarName: v.X for v in self.model.getVars()}

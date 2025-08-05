@@ -7,17 +7,21 @@ import networkx as nx
 from instance import OptimizationInstance
 
 instance = OptimizationInstance()
-model = instance.model
-model.optimize()
+model = instance.solve()
+
 
 if model.status == gb.GRB.INFEASIBLE:
     print("Model is infeasible. Computing IIS...")
-    model.computeIIS()
-    model.write("model.ilp")
+    print("Infeasible constraints:")
+    for c in model.infeasible_constraints:
+        print(f" - {c.ConstrName}")
 
-
-for v in model.getVars():
-    print(f"{v.VarName}: {v.X}")
+elif model.status == gb.GRB.OPTIMAL:
+    print("Optimal solution found:")
+    for name, value in instance.get_solution_values().items():
+        print(f"{name}: {value}")
+else:
+    print(f"Model status: {model.status}")
 
 
 '''
