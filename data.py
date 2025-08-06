@@ -12,11 +12,11 @@ class data:
         self.G = self.create_graph()  # Create the graph with nodes and edges
         self.R = self.create_R_set()  # Create the set of routes
         self.D = self.create_D_set()  # Create the set of depots
-        self.N = N
-        self.NO = NO
-        self.T = T
-        self.TO = TO
-        self.TO_j = TO_j
+        self.N = self.create_N_set()  # Create the set of feasible charging stops
+        self.NO = self.create_NO_set()  # Create the set of old charger stops
+        self.T = self.create_T_set()  # Create the set of power station spots
+        self.TO = self.create_TO_set()  # Create the set of old power station spots
+        self.TO_j = self.create_TO_j_set()  # Create the set of old power station spots for each stop j 
         self.V = V
         self.B = B
         self.BO = BO
@@ -137,15 +137,18 @@ class data:
         ]   
         return TO
 
-    stops_to_remove = [
-        "Stop1",
-        "Stop2",
-        "Stop4",
-    ]  # stops to remove from the power station spot set
-    TO = ["Depot1", "Stop3"]  # old power station spot set
-    TO_j = {
-        stop: [stop] for stop in T if stop not in stops_to_remove
-    }  # old power station spot set with the stops removed
+    def create_TO_j_set(self):
+        """
+        Create a set of old power station spots for each stop j.
+        Returns:
+            dict: Dictionary mapping each stop to a list containing that stop, excluding removed stops.
+        """
+        TO_j = {
+            stop: [stop] for stop in self.T if self.G.nodes[stop].get("charging_possible", True)
+        }
+        return TO_j
+
+
 
     V = ["M103", "M104"]  # non battery vehicle type set
 
