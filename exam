@@ -62,9 +62,15 @@ usare network x per generare una rete per caso base
 NETWORK X !!! -> for the creation of instance network of buses and routes!!
 
 
-thing to do for 07-08/07/2025
--Rumiz: nc_jrc_max and the other one
-    -IMPORTANT: CHECK ALL CONTRAINTS BECAUSE SOME ARE DISAPPEARING IN DEBUGGING (ESPECIALLY IN THE DECLARATION OF VARIVABLES)
--Lucas: R_jc, L_r and nob_rbc
+thing to do for 06/08/2025
+
+-Both: in the future we should unite the files data and data initialization maybe? Or we keep one for creaating the data and one for manipulating it.
+
+-Rumiz: 
+
+-Lucas:
+
 
 IDEA: using 2 contructors, 1 with csv and 1 with normal inputs.
+
+
