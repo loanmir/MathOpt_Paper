@@ -64,7 +64,10 @@ NETWORK X !!! -> for the creation of instance network of buses and routes!!
 
 thing to do for 06/08/2025
 
--Both: in the future we should unite the files data and data initialization maybe? Or we keep one for creaating the data and one for manipulating it.
+-Both: 
+-   in the future we should unite the files data and data initialization maybe? Or we keep one for   creaating the data and one for manipulating it.
+-   the methid to create G should be creating always the same G or should we automate it? (I think always the same G)
+
 
 -Rumiz: 
 

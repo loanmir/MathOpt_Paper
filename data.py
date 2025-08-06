@@ -11,7 +11,7 @@ class data:
     def __init__(self):
         self.G = self.create_graph()  # Create the graph with nodes and edges
         self.R = self.create_R_set()  # Create the set of routes
-        self.D = D
+        self.D = self.create_D_set()  # Create the set of depots
         self.N = N
         self.NO = NO
         self.T = T
@@ -51,7 +51,6 @@ class data:
         self.nob_rb = nob_rb
         self.nob_rbc = nob_rbc
 
-
     def create_graph(self):
         """
         Create a graph with nodes and edges representing depots and stops.
@@ -83,20 +82,61 @@ class data:
         Returns:
             list: List of route names in format ["r1", "r2", ..., "rN"]
         """
-        return [f"r{i+1}" for i in range(n_routes)]
+        R = [f"r{i + 1}" for i in range(n_routes)]
+        return R
 
+    def create_D_set(self):
+        """
+        Create a set of depots.
+        Returns:
+            list: List of depot names in format ["Depot1", "Depot2", ...]
+        """
+        D = [
+            n for n, attr in self.G.nodes(data=True) if attr.get("type") == "depot"
+        ]  # depot set
+        return D
 
-    D = [n for n, attr in G.nodes(data=True) if attr.get("type") == "depot"]  # depot set
+    def create_N_set(self):
+        """
+        Create a set of feasible charging stops.
+        Returns:
+            list: List of stop names in format ["Depot1", "Depot2", "Stop1", ...]
+        """
+        N = list(self.G.nodes)
+        return N
 
-    N = list(G.nodes)  # feasible charging stop set
-    # ['Depot1', 'Depot2', 'Stop1', 'Stop2', 'Stop3', 'Stop4', 'Stop5']
-    NO = [
-        stop for stop in N if G.nodes[stop].get("charging_possible", True)
-    ]  # set of old charger stops
+    def create_NO_set(self):
+        """Create a set of old charger stops.
+        Returns:
+            list: List of old charger stop names in format ["Stop1", "Stop2", ...]
+        """
+        NO = [
+            stop for stop in self.N if self.G.nodes[stop].get("charging_possible", True)
+        ]  # set of old charger stops
+        return NO
 
-    T = [
-        stop for stop in N
-    ]  # power station spot set (considering only one spot for each stop)
+    def create_T_set(self):
+        """
+        Create a set of power station spots.
+        Returns:
+            list: List of power station spot names in format ["Stop1", "Stop2", ...]
+        """
+        T = [
+            stop for stop in self.N
+        ]
+        return T 
+
+    def create_TO_set(self):
+        """
+        Create a set of old power station spots.
+        Returns:
+            list: List of old power station spot names in format ["Depot1", "Stop3", ...]
+        """
+        TO = [
+            stop for stop in self.T if self.G.nodes[stop].get("charging_possible", True)
+        ]   
+        return TO
+
     stops_to_remove = [
         "Stop1",
         "Stop2",
@@ -184,7 +224,9 @@ class data:
     }  # feasible charging type set for b-type electric buses
 
     B_rc = {
-        "r1": {"c1": ["E433", "E420", "E302"]}  # Also here we have one single charger type
+        "r1": {
+            "c1": ["E433", "E420", "E302"]
+        }  # Also here we have one single charger type
     }  # type set of c-type charging electric buses of route r
 
     BO_rc = {
