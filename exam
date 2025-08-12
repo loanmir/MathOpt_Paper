@@ -3,6 +3,14 @@
 - Graph
 - Route
 
+### THINGS TO AUTOMATE
+- Types of chargers (C)
+- Types of bus (B) and (V)
+- up_j
+
+### IMPORTANT THINGS 
+- create_ct_rjbc always gives the value of 25 in order to not complicate the code
+
 
 ### Questions
 

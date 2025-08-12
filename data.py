@@ -8,7 +8,10 @@ import math
 
 
 class data:
-    def __init__(self):
+    def __init__(self, n_types_chargers=1, n_types_elec_buses=3, n_types_non_battery_buses=2, up_j=3):
+        self.n_types_chargers = n_types_chargers
+        self.n_types_elec_buses = n_types_elec_buses
+        self.n_types_non_battery_buses = n_types_non_battery_buses
         self.G = self.create_graph()  # Create the graph with nodes and edges
         self.R = self.create_R_set()  # Create the set of routes
         self.D = self.create_D_set()  # Create the set of depots
@@ -17,21 +20,21 @@ class data:
         self.T = self.create_T_set()  # Create the set of power station spots
         self.TO = self.create_TO_set()  # Create the set of old power station spots
         self.TO_j = self.create_TO_j_set()  # Create the set of old power station spots for each stop j 
-        self.V = V
-        self.B = B
-        self.BO = BO
-        self.C = C
-        self.cap_b = cap_b
-        self.d_b_MAX = d_b_MAX
-        self.ct_rjbc = ct_rjbc
+        self.V = self.create_V_set(n_types_non_battery_buses)  # Create the set of non-battery vehicle types
+        self.B = self.create_B_set(n_types_elec_buses)  # Create the set of electric bus types    
+        self.BO = self.create_BO_set()
+        self.C = self.create_C_set(n_types_chargers)  # Create the set of charging types
+        self.cap_b = self.create_cap_b(self.create_capacities())  # Create the capacities for bus types
+        self.d_b_MAX = self.create_d_b_MAX()  # Create the maximum driving range for each bus type
+        self.ct_rjbc = self.create_ct_rjbc()  # Create the dictionary mapping routes to stops and their respective charging points
         self.cbus_b = cbus_b
         self.vcb_rb = vcb_rb
-        self.ccp_c = ccp_c
-        self.vcp_c = vcp_c
-        self.ccc_j = ccc_j
-        self.vcc_j = vcc_j
-        self.ccps_t = ccps_t
-        self.cl_tj = cl_tj
+        self.ccp_c = 120000  # CAPITAL COST of one c-type charging point
+        self.vcp_c = 4500  # VARIABLE COST of one c-type charging point
+        self.ccc_j = 5000  # CAPITAL COST of one charger at stop j
+        self.vcc_j = 500  # VARIABLE COST of one charger at stop j
+        self.ccps_t = 200000  # CAPITAL COST of a power station at t
+        self.cl_tj = 5000  # cost of linking power station spot t and stop j -> cl_tj = 0 if t is old and j has an old charger stop
         self.cc_uoc_pairs = cc_uoc_pairs
         self.csta_j = csta_j
         self.B_r = B_r
@@ -74,7 +77,7 @@ class data:
         return G
 
     # PARAMETERS
-    def create_R_set(self, n_routes=1):
+    def create_R_set(self):
         """
         Create a set of routes.
         Args:
@@ -82,6 +85,7 @@ class data:
         Returns:
             list: List of route names in format ["r1", "r2", ..., "rN"]
         """
+        n_routes=26
         R = [f"r{i + 1}" for i in range(n_routes)]
         return R
 
@@ -148,44 +152,123 @@ class data:
         }
         return TO_j
 
+    def create_V_set(self, n_types_non_battery_buses):
+        """
+        Create a set of non-battery vehicle types.
+        Returns:
+            list: List of non-battery vehicle type names in format ["M101", "M102", ...]
+        """
+        V = [f"M10{i + 1}" for i in range(n_types_non_battery_buses)]
+        return V
+    
+    def create_B_set(self, n_types_elec_buses):
+        """
+        Create a set of electric bus types.
+        Returns:
+            list: List of electric bus type names in format ["E401", "E402", ...]
+        """
+        B = [f"E40{i + 1}" for i in range(n_types_elec_buses)]
+        return B
 
+    def create_BO_set(self):
+        """
+        Create a set of old electric bus types.
+        Returns:
+            list: List of old electric bus type names in format ["E433", "E420", ...]
+        """
+        BO = ["E433"]  # old electric bus types set
+        return BO
 
-    V = ["M103", "M104"]  # non battery vehicle type set
-
-    # RO = [] # old electric bus routes set
-
-    B = ["E433", "E420", "E302"]  # electric bus-type
-    BO = ["E433"]  # old electric bus types set
-
-    C = ["c1"]
-
-    # charging type set -> In the base case |C| = 1 -> c = 1 -> we just have one charging type -> In the random cases, so modified base cases -> we several c types
+    def create_C_set(self, n_types_chargers):
+        """
+        Create a set of charging types.
+        Returns:
+            list: List of charging type names in format ["c1", "c2", ...]
+        """
+        C = [f"c{i + 1}" for i in range(n_types_chargers)]
+        return C
 
     # BUS INPUTS
-    capacities = [
-        90,
-        87,
-        85,
-        70,
-        80,
-    ]  # starting from electric and then non battery vehicles
 
-    cap_b = {
-        node: cap for node, cap in zip(B + V, capacities)
-    }  # passenger capacity of respective bus-types -> ASK PROFESSOR!!!!! -> IMPLEMENTING WITH ARRAY OR WITH DICTIONARY!!!!!!!!!!!!!!!!!!!!!!!!!
-    d_b_MAX = {
-        "E433": 15,
-        "E420": 10,
-        "E302": 8,
-    }  # driving range of fully charged b_bus_types-type electric bus
-    ct_rjbc = {
-        "r1": {
-            "Stop1": {"E433": {"c1": 26}, "E420": {"c1": 25}, "E302": {"c1": 27}},
-            "Stop2": {"E433": {"c1": 26}, "E420": {"c1": 25}, "E302": {"c1": 27}},
-            "Stop3": {"E433": {"c1": 26}, "E420": {"c1": 25}, "E302": {"c1": 27}},
-            "Stop4": {"E433": {"c1": 26}, "E420": {"c1": 25}, "E302": {"c1": 27}},
-        }
-    }
+    def create_capacities(self):
+        """
+        Create a list of capacities that repeats the base values until reaching target_length.
+        
+        Args:
+            target_length (int): Desired length of the capacities list
+        
+        Returns:
+            list: List of capacities repeated to match target_length
+        """
+        target_length = self.n_types_elec_buses + self.n_types_non_battery_buses
+
+        # Base capacities for electric and non-battery vehicles
+        base_capacities = [90, 87, 85, 70, 80]
+        
+        # Calculate how many complete repetitions we need
+        repetitions = target_length // len(base_capacities)
+        remainder = target_length % len(base_capacities)
+        
+        # Create the repeated list
+        capacities = base_capacities * repetitions
+        # Add the remaining elements if any
+        capacities.extend(base_capacities[:remainder])
+        
+        return capacities 
+
+    def create_cap_b(self, capacities):
+        """
+        Create a dictionary mapping bus types to their respective capacities.
+        
+        Args:
+            capacities (list): List of capacities for each bus type
+        
+        Returns:
+            dict: Dictionary mapping bus types to their capacities
+        """
+        
+        # Create a dictionary mapping each bus type to its capacity
+        cap_b = {node: cap for node, cap in zip(self.B + self.V, capacities)}
+        return cap_b
+    
+    def create_d_b_MAX(self):
+        """
+        Create a dictionary mapping electric bus types to their maximum driving range.
+        Base distances are reused cyclically if there are more buses than base distances.
+        
+        Returns:
+            dict: Dictionary mapping bus types to their maximum driving range
+        """
+        base_distances = [15, 20, 40, 25, 15, 15]
+        
+        d_b_MAX = {}
+        for i, bus in enumerate(self.B):
+            # Use modulo to cycle through base_distances
+            distance_index = i % len(base_distances)
+            d_b_MAX[bus] = base_distances[distance_index]
+        
+        return d_b_MAX # Maximum driving range for each bus type
+
+
+    def create_ct_rjbc(self):
+        """
+        Create a dictionary mapping routes to stops and their respective charging points.
+        
+        Returns:
+            dict: Dictionary mapping routes to stops and their charging points
+        """
+        ct_rjbc = {}
+        for r in self.R:
+            ct_rjbc[r] = {}
+            for stop in self.N:
+                ct_rjbc[r][stop] = {}
+                if self.G.nodes[stop].get("type") == "stop":
+                    for bus in self.B:
+                        ct_rjbc[r][stop][bus] = {}
+                        for c in self.C:
+                            ct_rjbc[r][stop][bus][c] = 25
+        return ct_rjbc
+    
 
     # b_bus_types-type electric bus capital cost (initial investment for buying bus)
     cbus_b = {"E433": 400000, "E420": 500000, "E302": 350000}
@@ -193,12 +276,6 @@ class data:
     vcb_rb = {"r1": {"E433": 270000, "E420": 200000, "E302": 280000}}
 
     # COST INPUTS (considered constant for all c types (one at the moment) and all j stops)
-    ccp_c = 120000  # CAPITAL COST of one c-type charging point
-    vcp_c = 4500  # VARIABLE COST of one c-type charging point
-    ccc_j = 5000  # CAPITAL COST of one charger at stop j
-    vcc_j = 500  # VARIABLE COST of one charger at stop j
-    ccps_t = 200000  # CAPITAL COST of a power station at t
-    cl_tj = 5000  # cost of linking power station spot t and stop j -> cl_tj = 0 if t is old and j has an old charger stop
     cc_uoc_pairs = [
         (1.07e8, 5e6),
         (1.5e7, 7e6),
