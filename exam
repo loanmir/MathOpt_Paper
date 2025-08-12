@@ -1,21 +1,7 @@
-1. Choose the proper detail!
-2. If needed describe the theoretical math representing the problem
-3. State the time that researchers needed and the time that you needed -> Describe the difference (Remember that u are using your laptop)
-4. WATCH OUT -> Some papars can contain some ERRORS!!! -> Can be CONCEPTUAL problems or sometimes just MINOR errors
 
-5. Send the code sooner -> at least 2 days before
-6. test file containing a small instance of the varioables, so test data were you are testing it
-
-7. a scalability file used to do your own scalability analysis -> If the run execution is too long, get another smaller instance -> one night max
-
-8. you must know what you present -> DON'T make statements that you are not sure about it or that you don't know -> Rather say that you guess or you assume
-
-PROBLEMS:
-    - we need to give each variable a UNIQUE name ( see constraint 60 for reference)
-    - probably we need to do the same with the constraint anmes (check on interent if it is the case)
-        - Check contraint 61 for reference
-
-    - How to implement constraints 64, 65 and 66?
+### THINGS TO NOT AUTOMATE AND LEAVE STANDARD
+- Graph
+- Route
 
 
 ### Questions
@@ -62,9 +48,18 @@ usare network x per generare una rete per caso base
 NETWORK X !!! -> for the creation of instance network of buses and routes!!
 
 
-thing to do for 07-08/07/2025
--Rumiz: nc_jrc_max and the other one
-    -IMPORTANT: CHECK ALL CONTRAINTS BECAUSE SOME ARE DISAPPEARING IN DEBUGGING (ESPECIALLY IN THE DECLARATION OF VARIVABLES)
--Lucas: R_jc, L_r and nob_rbc
+thing to do for 06/08/2025
+
+-Both: 
+-   in the future we should unite the files data and data initialization maybe? Or we keep one for   creaating the data and one for manipulating it.
+-   the methid to create G should be creating always the same G or should we automate it? (I think always the same G)
+
+
+-Rumiz: 
+
+-Lucas:
+
 
 IDEA: using 2 contructors, 1 with csv and 1 with normal inputs.
+
+
