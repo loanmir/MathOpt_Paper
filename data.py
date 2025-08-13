@@ -12,6 +12,7 @@ class data:
         self.n_types_chargers = n_types_chargers
         self.n_types_elec_buses = n_types_elec_buses
         self.n_types_non_battery_buses = n_types_non_battery_buses
+        self.n_old_charging_plugs_per_stop = 2  # Number of old charging plugs per stop
         self.G = self.create_graph()  # Create the graph with nodes and edges
         self.R = self.create_R_set()  # Create the set of routes
         self.D = self.create_D_set()  # Create the set of depots
@@ -27,23 +28,23 @@ class data:
         self.cap_b = self.create_cap_b(self.create_capacities())  # Create the capacities for bus types
         self.d_b_MAX = self.create_d_b_MAX()  # Create the maximum driving range for each bus type
         self.ct_rjbc = self.create_ct_rjbc()  # Create the dictionary mapping routes to stops and their respective charging points
-        self.cbus_b = cbus_b
-        self.vcb_rb = vcb_rb
+        self.cbus_b = self.create_cbus_b()  # Create the capital costs for electric bus types
+        self.vcb_rb = self.create_vcb_rb()  # Create the variable costs for electric buses on routes
         self.ccp_c = 120000  # CAPITAL COST of one c-type charging point
         self.vcp_c = 4500  # VARIABLE COST of one c-type charging point
         self.ccc_j = 5000  # CAPITAL COST of one charger at stop j
         self.vcc_j = 500  # VARIABLE COST of one charger at stop j
         self.ccps_t = 200000  # CAPITAL COST of a power station at t
         self.cl_tj = 5000  # cost of linking power station spot t and stop j -> cl_tj = 0 if t is old and j has an old charger stop
-        self.cc_uoc_pairs = cc_uoc_pairs
-        self.csta_j = csta_j
-        self.B_r = B_r
-        self.V_r = V_r
-        self.C_b = C_b
-        self.B_rc = B_rc
-        self.BO_rc = BO_rc
-        self.co_b = co_b
-        self.nod_jc = nod_jc
+        self.cc_uoc_pairs = self.create_cc_uoc_pairs()  # Create the capital and operational costs for each charging type
+        self.csta_j = 100000  # capital cost of a recharging station at stop j (considered constant for all j)
+        self.B_r = self.create_B_r()  # Create the mapping of routes to electric bus types
+        self.V_r = self.create_V_r()  # Create the mapping of routes to non-battery vehicle types
+        self.C_b = self.create_C_b()  # Create the mapping of bus types to charging types
+        self.B_rc = self.create_B_rc()  # Create the mapping of routes to bus types and charging types
+        self.BO_rc = self.create_BO_rc()  # Create the old electric bus types for each route and charging type
+        self.co_b = self.create_co_b()  # Create the operational costs for each bus type
+        self.nod_jc = self.create_nod_jc()  # Create the number of old c-type plugs devices at stop j
         self.nop_jc = nop_jc
         self.up_j = up_j
         self.uc_c = uc_c
@@ -115,7 +116,7 @@ class data:
             list: List of old charger stop names in format ["Stop1", "Stop2", ...]
         """
         NO = [
-            stop for stop in self.N if self.G.nodes[stop].get("charging_possible", True)
+            stop for stop in self.N if self.G.nodes[stop].get("charging_possible", False)
         ]  # set of old charger stops
         return NO
 
@@ -137,7 +138,7 @@ class data:
             list: List of old power station spot names in format ["Depot1", "Stop3", ...]
         """
         TO = [
-            stop for stop in self.T if self.G.nodes[stop].get("charging_possible", True)
+            stop for stop in self.T if self.G.nodes[stop].get("charging_possible", False)
         ]   
         return TO
 
@@ -148,7 +149,7 @@ class data:
             dict: Dictionary mapping each stop to a list containing that stop, excluding removed stops.
         """
         TO_j = {
-            stop: [stop] for stop in self.T if self.G.nodes[stop].get("charging_possible", True)
+            stop: [stop] for stop in self.T if self.G.nodes[stop].get("charging_possible", False)
         }
         return TO_j
 
@@ -249,7 +250,6 @@ class data:
         
         return d_b_MAX # Maximum driving range for each bus type
 
-
     def create_ct_rjbc(self):
         """
         Create a dictionary mapping routes to stops and their respective charging points.
@@ -269,66 +269,146 @@ class data:
                             ct_rjbc[r][stop][bus][c] = 25
         return ct_rjbc
     
-
-    # b_bus_types-type electric bus capital cost (initial investment for buying bus)
-    cbus_b = {"E433": 400000, "E420": 500000, "E302": 350000}
-    # variable cost of b_bus_types-type electric bus on route r
-    vcb_rb = {"r1": {"E433": 270000, "E420": 200000, "E302": 280000}}
+    def create_cbus_b(self):
+        """
+        Create a dictionary mapping electric bus types to their capital costs.
+        
+        Returns:
+            dict: Dictionary mapping bus types to their capital costs
+        """
+        base_costs = [400000, 500000, 350000]  # Base costs for electric buses
+        cbus_b = {}
+        for i, bus in enumerate(self.B):
+            # Use modulo to cycle through base_costs
+            cost_index = i % len(base_costs)
+            cbus_b[bus] = base_costs[cost_index]
+        return cbus_b # b_bus_types-type electric bus capital cost (initial investment for buying bus)
+    
+    def create_vcb_rb(self):
+        """
+        Create a dictionary mapping routes to bus types and their variable costs.
+        
+        Returns:
+            dict: Dictionary mapping routes to bus types and their variable costs
+        """
+        base_costs = [270000, 200000, 280000]  # Base variable costs for electric buses
+        vcb_rb = {}
+        for r in self.R:
+            vcb_rb[r] = {}
+            for i, bus in enumerate(self.B):
+                # Use modulo to cycle through base_costs
+                cost_index = i % len(base_costs)
+                vcb_rb[r][bus] = base_costs[cost_index]
+        return vcb_rb # Variable costs of b_bus_types-type electric bus on route r
 
     # COST INPUTS (considered constant for all c types (one at the moment) and all j stops)
-    cc_uoc_pairs = [
-        (1.07e8, 5e6),
-        (1.5e7, 7e6),
-        (2e7, 1.07e7),
-        (3e7, 1.5e7),
-        (4e7, 2e7),
-        (1.8e7, 9e6),
-        (2.2e7, 1.1e7),
-        (2.4e7, 1.2e7),
-        (2.6e7, 1.3e7),
-        (2.8e7, 1.4e7),
-    ]
+    def create_cc_uoc_pairs(self):
+        """
+        Create a list of tuples representing the capital and operational costs for each charging type.
+        
+        Returns:
+            list: List of tuples (capital cost, operational cost) for each charging type
+        """
+        cc_uoc_pairs = [
+            (1.07e8, 5e6),  # Example values for capital and operational costs
+            (1.5e7, 7e6),
+            (2e7, 1.07e7),
+            (3e7, 1.5e7),
+            (4e7, 2e7),
+            (1.8e7, 9e6),
+            (2.2e7, 1.1e7),
+            (2.4e7, 1.2e7),
+            (2.6e7, 1.3e7),
+            (2.8e7, 1.4e7),
+        ]
+        return cc_uoc_pairs
 
-    csta_j = 100000  # capital cost of a recharging station at stop j (considered constant for all j)
+    def create_B_r(self):
+        """
+        Create a dictionary mapping routes to sets of electric bus types.
+        
+        Returns:
+            dict: Dictionary mapping each route to a list of electric bus types
+        """
+        B_r = {}
+        for r in self.R:
+            B_r[r] = self.B  # Assuming all routes have the same set of electric bus types
+        return B_r
 
-    B_r = {"r1": ["E433", "E420", "E302"]}  # electric bus type set of route r
+    def create_V_r(self):
+        """
+        Create a dictionary mapping routes to sets of non-battery vehicle types.
+        
+        Returns:
+            dict: Dictionary mapping each route to a list of non-battery vehicle types
+        """
+        V_r = {}
+        for r in self.R:
+            V_r[r] = self.V  # Assuming all routes have the same set of non-battery vehicle types
+        return V_r
 
-    V_r = {"r1": ["M103"]}  # route r set of non-battery vehicle types
+    def create_C_b(self):
+        """
+        Create a dictionary mapping electric bus types to their feasible charging types.
+        
+        Returns:
+            dict: Dictionary mapping each electric bus type to a list of feasible charging types
+        """
+        C_b = {}
+        for bus in self.B:
+            C_b[bus] = self.C # Assuming all electric bus types have the same set of feasible charging types
+        return C_b  # feasible charging type set for b-type electric buses
+    
+    def create_B_rc(self):
+        """
+        Create a dictionary mapping routes to sets of electric bus types and their charging types.
+        
+        Returns:
+            dict: Dictionary mapping each route to a dictionary of charging types and their respective electric bus types
+        """
+        B_rc = {}
+        for r in self.R:
+            B_rc[r] = {}
+            for c in self.C:
+                B_rc[r][c] = self.B  # Assuming all routes have the same set of electric bus types for each charging type
+        return B_rc  # type set of c-type charging electric buses of route r
 
-    C_b = {
-        "E433": [
-            "c1"
-        ],  # Since in base case we have C = [1] then each bus type supports the same single charging type
-        "E420": ["c1"],
-        "E302": ["c1"],
-    }  # feasible charging type set for b-type electric buses
+    def create_BO_rc(self):
+        """
+        Create a dictionary mapping routes to sets of old electric bus types and their charging types.
+        
+        Returns:
+            dict: Dictionary mapping each route to a dictionary of charging types and their respective old electric bus types
+        """
+        BO_rc = {}
+        for r in self.R:
+            BO_rc[r] = {}
+            for c in self.C:
+                BO_rc[r][c] = self.BO  # Assuming all routes have the same set of old electric bus types for each charging type
+        return BO_rc  # type set of c-type charging old electric buses of route r
 
-    B_rc = {
-        "r1": {
-            "c1": ["E433", "E420", "E302"]
-        }  # Also here we have one single charger type
-    }  # type set of c-type charging electric buses of route r
+    def create_co_b(self):
+        """
+        Create a dictionary mapping bus types to their required charging types.
+        
+        Returns:
+            dict: Dictionary mapping each bus type to a list of required charging types
+        """
+        co_b = {}
+        for bus in self.B:
+            co_b[bus] = [self.C[0]]  # Assuming each bus type supports the same single charging type
+        return co_b  # required charging type for bus type b
 
-    BO_rc = {
-        "r1": {"c1": ["E433"]}
-    }  # type set of c-type charging old electric buses of route r
+    def create_nod_jc(self):
+        nod_jc = {
+            (j, c): 0 for j in self.N if self.G.nodes[j] for c in self.C
+        }  # number of old c-type plugs devices at stop j
 
-    co_b = {
-        "E433": [
-            "c1"
-        ],  # Since in base case we have C = [1] then each bus type supports the same single charging type
-        "E420": ["c1"],
-        "E302": ["c1"],
-    }  # required charging type for bus type b
+        for node in self.G.nodes:
+            if self.G.nodes[node].get("charging_possible", False):
+                nod_jc[node, "c1"] = self.n_old_charging_plugs_per_stop
 
-    nod_jc = {
-        (j, c): 0 for j in N if G.nodes[j] and G.nodes[j] for c in C
-    }  # number of old c-type plugs devices at stop j
-    nod_jc["Depot1", "c1"] = 2
-    nod_jc["Stop1", "c1"] = 0
-    nod_jc["Stop2", "c1"] = 0
-    nod_jc["Stop3", "c1"] = 2
-    nod_jc["Stop4", "c1"] = 0
+        return nod_jc  # number of old c-type plugs devices at stop j
 
     nop_jc = {
         (j, c): 0
