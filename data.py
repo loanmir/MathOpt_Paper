@@ -410,6 +410,8 @@ class data:
 
         return nod_jc  # number of old c-type plugs devices at stop j
 
+# Should we create a method for the construction of everything else? IMPORTANT!!
+
     nop_jc = {
         (j, c): 0
         for j in N
