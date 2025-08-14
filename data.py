@@ -16,8 +16,8 @@ class data:
         self.n_old_charging_devices_per_stop = 2 # Number of old charging devices per stop
         self.n_old_non_battery_buses_per_route = 1 # Number of old non-battery buses per route
         self.n_old_elec_buses_per_route = 1  # Number of old electric buses per route
-        self.lt_r_global = 6 # lower bound on traffic interval of route r
-        self.ut_r_global = 12 # upper bound on traffic interval of route r
+        self.lt_r_global = 9 # lower bound on traffic interval of route r
+        self.ut_r_global = 13 # upper bound on traffic interval of route r
         self.G = self.create_graph()  # Create the graph with nodes and edges
         self.R = self.create_R_set()  # Create the set of routes
         self.D = self.create_D_set()  # Create the set of depots
@@ -50,15 +50,15 @@ class data:
         self.BO_rc = self.create_BO_rc()  # Create the old electric bus types for each route and charging type
         self.co_b = self.create_co_b()  # Create the operational costs for each bus type
         self.nod_jc = self.create_nod_jc()  # Create the number of old c-type plugs devices at stop j
-        self.nop_jc = nop_jc
+        self.nop_jc = self.create_nop_jc()  # Create the number of old c-type charging points at stop j
         self.up_j = self.create_up_j(up_j_value)  # Define the upper limit for the number of charging points at stop j
-        self.uc_c = uc_c
+        self.uc_c = self.create_uc_c(uc_c_value)  # Define the upper limit for the number of charging points of c-type
         self.p_c = 260  # price of one c-type charging point
         self.utp_t = 1300  # output power of a power station at spot t ∈ T
-        self.T_j = T_j
-        self.nv_rb_0 = nv_rb_0
-        self.nob_rb = nob_rb
-        self.nob_rbc = nob_rbc
+        self.T_j = self.create_T_j()  # Create the mapping of feasible charging stops to their respective power station spots
+        self.nv_rb_0 = self.create_nv_rb_0()  # Create the initial number of non-battery vehicles on route r
+        self.nob_rb = self.create_nob_rb()  # Create the initial number of old electric buses on route r
+        self.nob_rbc = self.create_nob_rbc()  # Create the initial number of old electric buses on route r for each charging type c
 
     def create_graph(self):
         """
@@ -180,9 +180,9 @@ class data:
         """
         Create a set of old electric bus types.
         Returns:
-            list: List of old electric bus type names in format ["E433", "E420", ...]
+            list: List of old electric bus type names in format ["E401"]
         """
-        BO = ["E433"]  # old electric bus types set
+        BO = ["E401"]  # old electric bus types set
         return BO
 
     def create_C_set(self, n_types_chargers):
@@ -272,7 +272,8 @@ class data:
                         ct_rjbc[r][stop][bus] = {}
                         for c in self.C:
                             ct_rjbc[r][stop][bus][c] = 25
-        return ct_rjbc
+        return ct_rjbc # charging Time of b-type electric bus at c-type charging point of stop j on route r
+
     
     def create_cbus_b(self):
         """
@@ -593,7 +594,7 @@ class data:
             "r19": ["stop14", "stop17", "stop14"],
             "r20": ["stop18", "stop19", "stop18"],
             "r21": ["stop18", "stop2", "stop20", "stop2", "stop18"],
-            "r22": ["stop14", "stop2", "stop21", "stop2", "stop14"],
+            "r22": ["stop1", "stop2", "stop1"],
             "r23": ["stop22", "stop15", "stop22"],
             "r24": ["stop15", "stop2", "stop23", "stop2", "stop15"],
             "r25": ["stop15", "stop2", "stop23", "stop2", "stop15"],
@@ -601,118 +602,276 @@ class data:
         }  # route r cycle
         return pi_r  # stop sequence of route r
 
-    d_r = {"r1": "Depot1"}
-
-    # define L_r (should be: ut_r * num_of_old_veichles_operating_on_the_route)
-    L_r = {
-        "r1": 7 * 5,  # cycle time of route r1
-    }
+    def create_d_r(self):
+        """
+        Create a dictionary mapping routes to their respective depots.
+        
+        Returns:
+            dict: Dictionary mapping each route to its depot
+        """
+        d_r = {
+            "r1": "Depot1",
+            "r2": "Depot1",
+            "r3": "Depot1",
+            "r4": "Depot1",
+            "r5": "Depot1",
+            "r6": "Depot1",
+            "r7": "Depot1",
+            "r8": "Depot1",
+            "r9": "Depot1",
+            "r10": "Depot1",
+            "r11": "Depot1",
+            "r12": "Depot1",
+            "r13": "Depot1",
+            "r14": "Depot1",
+            "r15": "Depot2",
+            "r16": "Depot2",
+            "r17": "Depot2",
+            "r18": "Depot2",
+            "r19": "Depot2",
+            "r20": "Depot2",
+            "r21": "Depot2",
+            "r22": "Depot2",
+            "r23": "Depot2",
+            "r24": "Depot2",
+            "r25": "Depot2",
+            "r26": "Depot2"
+        }
+        return d_r  # depot of route r
+    
+    def create_L_r(self):
+        """
+        Create a dictionary mapping routes to their cycle times.
+        
+        Returns:
+            dict: Dictionary mapping each route to its cycle time
+        """
+        # define L_r (should be: ut_r * num_of_old_veichles_operating_on_the_route)
+        L_r = {
+            route : (self.ut_r_global * (self.n_old_elec_buses_per_route + self.n_old_non_battery_buses_per_route)) for route in self.R  # cycle time of route r1
+        }
+        return L_r  # cycle time of route r
 
     # this need to be [d(D,S1), d(S1,S2), d(S2,S3), ...] where D is the depot and S1, S2, ..., are the stops in the route
-    distance_r = {"r1": [3, 4, 2, 5, 5, 2, 4]}  # distance of each stop in route r
+    def create_distance_r(self):
+        """
+        Create a dictionary mapping routes to the distances of each stop in that route.
+        
+        Returns:
+            dict: Dictionary mapping each route to a list of distances for its stops
+        """
+        distance_r = {
+            "r1": [3, 9, 9],
+            "r2": [3, 9, 4, 4, 9],
+            "r3": [3, 9, 6, 6, 9],
+            "r4": [3, 5, 5],
+            "r5": [3, 5, 4, 4, 5],
+            "r6": [3, 11, 11],
+            "r7": [3, 5, 4, 4, 5],
+            "r8": [2, 5, 13, 13, 5],
+            "r9": [3, 9, 9],
+            "r10": [3, 9, 9],
+            "r11": [2, 13, 13],
+            "r12": [4, 8, 8],
+            "r13": [4, 7, 7],
+            "r14": [4, 7, 9, 9, 7],
+            "r15": [3, 9, 9],
+            "r16": [3, 15, 15],
+            "r17": [3, 14, 14],
+            "r18": [3, 13, 13],
+            "r19": [3, 14, 14],
+            "r20": [4, 12, 12],
+            "r21": [4, 18, 2, 2, 18],
+            "r22": [3, 9, 9],
+            "r23": [2, 6, 6],
+            "r24": [6, 10, 6, 6, 10],
+            "r25": [6, 10, 7, 7, 10],
+            "r26": [6, 21, 21]
+        }
+        return distance_r # distance of each stop in route r
 
-    # This is to generate S_rbc_s
-    S_rbc_s = {}
-    for r in R:
-        stops = pi_r[r]
-        stop_dists = distance_r[r]
-        for b in B_r[r]:
-            for c in C_b[b]:
-                scenarios = di.generate_feasible_scenarios(
-                    r, stops, stop_dists, b, c, d_b_MAX[b]
-                )
-                for idx, s in enumerate(scenarios, 1):
-                    S_rbc_s[(r, b, c, idx)] = list(s)
+    def create_S_rbc_s(self):
+        """
+        Create a dictionary mapping routes, bus types, charging types, and scenario indices to feasible scenarios.
+        
+        Returns:
+            dict: Dictionary mapping (route, bus type, charging type, scenario index) to a list of feasible scenarios
+        """
+
+        # This is to generate S_rbc_s
+        S_rbc_s = {}
+        pi_r = self.create_pi_r()  # stop sequence of route r
+        distance_r = self.create_distance_r()  # distance of each stop in route r
+        for r in self.R:
+            stops = pi_r[r]
+            stop_dists = distance_r[r]
+            for b in self.B_r[r]:
+                for c in self.C_b[b]:
+                    scenarios = di.generate_feasible_scenarios(
+                        r, stops, stop_dists, b, c, self.d_b_MAX[b]
+                    )
+                    for idx, s in enumerate(scenarios, 1):
+                        S_rbc_s[(r, b, c, idx)] = list(s)
+
+
+        return S_rbc_s
+
     """
     # transpose to change the order of the axis and respect the roder of the inputs (r,b,c)
     n_rbc_data = n_rbc_data_2d[:, :, np.newaxis].transpose(1, 0, 2) #just this case since we need also a c dimensione even if it is just 1
     n_rbc = di.init_n_rbc(n_rbc_data, R, B, C) # Initialize n_rbc with data from data_inizialization module
     """
-    # Define n_rbc
-    n_rbc = {}
 
-    for r in R:
-        depot = d_r[r]
-        t1 = pi_r[r][0]
-        t2 = di.get_middle_value_of_set(pi_r[r])
-        route_stops = pi_r[r]
+    def create_n_rbc(self):
+        """
+        Create a dictionary mapping routes, bus types, charging types to the number of scenarios.
+        
+        Returns:
+            dict: Dictionary mapping (route, bus type, charging type) to the number of scenarios
+        """
+        pi_r = self.create_pi_r()  # stop sequence of route r
+        d_r = self.create_d_r()  # depot of route r
+        # Define n_rbc
+        n_rbc = {}
 
-        # Distances
-        I0 = di.get_distance(G, depot, t1)
-        I1 = di.get_distance(G, t1, t2)
-        I2 = di.get_distance(G, t2, t1)
+        for r in self.R:
+            depot = d_r[r]
+            t1 = pi_r[r][0]
+            t2 = di.get_middle_value_of_set(pi_r[r])
 
-        max_single = max(I0, I1, I2)
-        max_comb = max(I0 + I1, I1 + I2, I2 + I0)
+            # Distances
+            I0 = di.get_distance(self.G, depot, t1)
+            I1 = di.get_distance(self.G, t1, t2)
+            I2 = di.get_distance(self.G, t2, t1)
 
-        for b in B_r[r]:
-            for c in C_b[b]:
-                dmax = d_b_MAX[b]
+            max_single = max(I0, I1, I2)
+            max_comb = max(I0 + I1, I1 + I2, I2 + I0)
 
-                if dmax >= max_comb:
-                    n_rbc[(r, b, c)] = 0  # No charging needed
-                elif dmax >= max_single:
-                    n_rbc[(r, b, c)] = 2  # Two scensarios with one stop
-                else:
-                    n_rbc[(r, b, c)] = 1  # One scenario with both stops
+            for b in self.B_r[r]:
+                for c in self.C_b[b]:
+                    dmax = self.d_b_MAX[b]
 
-    print(f"Number of scenarios for each (r, b, c): {n_rbc}")
+                    if dmax >= max_comb:
+                        n_rbc[(r, b, c)] = 0  # No charging needed
+                    elif dmax >= max_single:
+                        n_rbc[(r, b, c)] = 2  # Two scensarios with one stop
+                    else:
+                        n_rbc[(r, b, c)] = 1  # One scenario with both stops
 
-    # Define R_jc
-    R_jc = di.compute_all_R_jc(S_rbc_s)
+        # print(f"Number of scenarios for each (r, b, c): {n_rbc}")
 
-    # Define nc_jrc_max
-    nc_jrc_max = {}
+        return n_rbc  # number of scenarios for each (r, b, c)
 
-    for j in N:
-        if j not in D:
-            for c in C:
-                for r in R_jc[j, c]:
-                    # Initialize nested dictionaries if not present
-                    if j not in nc_jrc_max:
-                        nc_jrc_max[j] = {}
-                    if r not in nc_jrc_max[j]:
-                        nc_jrc_max[j][r] = {}
 
-                    x = di.compute_nc_jrc_max(
-                        r, j, c, B_rc[r][c], ct_rjbc, lt_r[r]
-                    )  # This will compute the maximum number of plug devices at stop j, route r, charger type c
-                    nc_jrc_max[j][r][c] = x
+    def create_R_jc(self):
+        """
+        Create a dictionary mapping routes, bus types, charging types to the number of scenarios.
+        
+        Returns:
+            dict: Dictionary mapping (route, bus type, charging type) to the number of scenarios
+        """
+        # Define R_jc
+        R_jc = di.compute_all_R_jc(self.create_S_rbc_s())
+        return R_jc
 
-    # Define noc_jrc_ct
-    noc_jrc_ct = {}
+    def create_nc_jrc_max(self):
+        """
+        Create a dictionary mapping stops, routes, and charging types to the maximum number of plug devices.
+        
+        Returns:
+            dict: Dictionary mapping (stop, route, charging type) to the maximum number of plug devices
+        """
+        # Define nc_jrc_max
+            # Define nc_jrc_max
+        nc_jrc_max = {}
+        R_jc = self.create_R_jc()  # routes, bus types, charging types
+        lt_r = self.create_lt_r()  # lower traffic interval bounds for each route
 
-    for j in N:
-        if j not in D:
-            for c in C:
-                for r in R_jc[j, c]:
-                    # Initialize nested dictionaries if not present
-                    if j not in noc_jrc_ct:
-                        noc_jrc_ct[j] = {}
-                    if r not in noc_jrc_ct[j]:
-                        noc_jrc_ct[j][r] = {}
+        for j in self.N:
+            if j not in self.D:
+                for c in self.C:
+                    for r in R_jc[j, c]:
+                        # Initialize nested dictionaries if not present
+                        if j not in nc_jrc_max:
+                            nc_jrc_max[j] = {}
+                        if r not in nc_jrc_max[j]:
+                            nc_jrc_max[j][r] = {}
 
-                    x = di.compute_noc_jrc_ct(
-                        r, j, c, BO_rc[r][c], ct_rjbc, lt_r[r]
-                    )  # This will compute the maximum number of plug devices at stop j, route r, charger type c
-                    noc_jrc_ct[j][r][c] = x
+                        x = di.compute_nc_jrc_max(
+                            r, j, c, self.B_rc[r][c], self.ct_rjbc, lt_r[r]
+                        )  # This will compute the maximum number of plug devices at stop j, route r, charger type c
+                        nc_jrc_max[j][r][c] = x
+        return nc_jrc_max
 
-    dem_0_r = {}  # passenger capacity of route r to be satisfied by new electric buses and remaining non-battery vehicles
-    for r in R:
-        dem_0_r[r] = dem_r[r] - sum(
-            nob_rb[r].get(b, 0) * cap_b[b] for b in B_r[r]
-        )  ## calculating dem_0_r!
-        # .get used because if we don't find a "bus" we just have 0 and not a crash (like with nob_rb[r][b])
-        # no need of quicksum becuse we have only inputs and no variables
+    def create_noc_jrc_ct(self):
+        """
+        Create a dictionary mapping stops, routes, and charging types to the maximum number of plug devices.
+        
+        Returns:
+            dict: Dictionary mapping (stop, route, charging type) to the maximum number of plug devices
+        """
+        R_jc = self.create_R_jc()
+        lt_r = self.create_lt_r()  # lower traffic interval bounds for each route
 
-    ub_rb = {
-        # {1: {'busA': 3}},
-    }  # upper bound on the number of new b-type electric buses
-    for r in R:
-        ub_rb[r] = {}  # Initialize ub_rb for each route r
-        for b in B_r[
-            r
-        ]:  # assuming B_r[r] gives buses relevant to route r            ## calculating ub_rb
-            numerator = dem_0_r[r]
-            denominator = cap_b[b]
-            ub_rb[r][b] = math.ceil(numerator / denominator)
+        # Define noc_jrc_ct
+        noc_jrc_ct = {}
+
+        for j in self.N:
+            if j not in self.D:
+                for c in self.C:
+                    for r in R_jc[j, c]:
+                        # Initialize nested dictionaries if not present
+                        if j not in noc_jrc_ct:
+                            noc_jrc_ct[j] = {}
+                        if r not in noc_jrc_ct[j]:
+                            noc_jrc_ct[j][r] = {}
+
+                        x = di.compute_noc_jrc_ct(
+                            r, j, c, self.BO_rc[r][c], self.ct_rjbc, lt_r[r]
+                        )  # This will compute the maximum number of plug devices at stop j, route r, charger type c
+                        noc_jrc_ct[j][r][c] = x
+
+        return noc_jrc_ct
+
+
+    def create_dem_0_r(self):
+        """
+        Create a dictionary mapping routes to the remaining passenger capacity to be satisfied by new electric buses and remaining non-battery vehicles.
+        
+        Returns:
+            dict: Dictionary mapping each route to its remaining passenger capacity
+        """
+        dem_r = self.create_dem_r()
+
+        dem_0_r = {}  # passenger capacity of route r to be satisfied by new electric buses and remaining non-battery vehicles
+        for r in self.R:
+            dem_0_r[r] = dem_r[r] - sum(
+                self.nob_rb[r].get(b, 0) * self.cap_b[b] for b in self.B_r[r]
+            )  ## calculating dem_0_r!
+            # .get used because if we don't find a "bus" we just have 0 and not a crash (like with nob_rb[r][b])
+            # no need of quicksum becuse we have only inputs and no variables
+
+        return dem_0_r
+
+    def create_ub_rb(self):
+        """
+        Create a dictionary mapping routes to upper bounds on the number of new b-type electric buses.
+        
+        Returns:
+            dict: Dictionary mapping each route to a dictionary of bus types and their upper bounds
+        """
+        dem_0_r = self.create_dem_0_r()  # passenger capacity of route r to be satisfied by new electric buses and remaining non-battery vehicles
+    
+        ub_rb = {
+            # {1: {'busA': 3}},
+        }  # upper bound on the number of new b-type electric buses
+        for r in self.R:
+            ub_rb[r] = {}  # Initialize ub_rb for each route r
+            for b in self.B_r[
+                r
+            ]:  # assuming B_r[r] gives buses relevant to route r            ## calculating ub_rb
+                numerator = dem_0_r[r]
+                denominator = self.cap_b[b]
+                ub_rb[r][b] = math.ceil(numerator / denominator)
+        
+        return ub_rb  # upper bound on the number of new b-type electric buses on route r
