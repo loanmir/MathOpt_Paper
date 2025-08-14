@@ -10,6 +10,9 @@
 
 ### IMPORTANT THINGS 
 - create_ct_rjbc always gives the value of 25 in order to not complicate the code
+- considering old plug devices and old charging devices only "c1"
+- T_j considers feasible only the same stops 
+- route22 is the only different one from the papare dataset
 
 
 ### Questions
