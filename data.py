@@ -81,18 +81,49 @@ class data:
         """
         G = nx.Graph()
         G.add_node("Depot1", type="depot", charging_possible=True)
-        G.add_node("Stop1", type="stop", charging_possible=False)
-        G.add_node("Stop2", type="stop", charging_possible=False)
-        G.add_node("Stop3", type="stop", charging_possible=True)
+        G.add_node("Depot2", type="depot", charging_possible=True)
+        G.add_node("Stop1", type="stop", charging_possible=True)
+        G.add_node("Stop2", type="stop", charging_possible=True)
+        G.add_node("Stop3", type="stop", charging_possible=False)
         G.add_node("Stop4", type="stop", charging_possible=False)
+        G.add_node("Stop5", type="stop", charging_possible=True)
+        G.add_node("Stop6", type="stop", charging_possible=True)
+        G.add_node("Stop7", type="stop", charging_possible=True)
+        G.add_node("Stop8", type="stop", charging_possible=True)
+        G.add_node("Stop9", type="stop", charging_possible=True)
+        G.add_node("Stop10", type="stop", charging_possible=True)
+        G.add_node("Stop11", type="stop", charging_possible=True)
+        G.add_node("Stop12", type="stop", charging_possible=True)
+        G.add_node("Stop13", type="stop", charging_possible=True)
+        G.add_node("Stop14", type="stop", charging_possible=True)
+        G.add_node("Stop15", type="stop", charging_possible=True)
+        G.add_node("Stop16", type="stop", charging_possible=True)
+        G.add_node("Stop17", type="stop", charging_possible=True)
+        G.add_node("Stop18", type="stop", charging_possible=True)
+        G.add_node("Stop19", type="stop", charging_possible=True)
+        G.add_node("Stop20", type="stop", charging_possible=False)
+        G.add_node("Stop21", type="stop", charging_possible=False)
+        G.add_node("Stop22", type="stop", charging_possible=False)
+        G.add_node("Stop23", type="stop", charging_possible=False)
+        G.add_node("Stop24", type="stop", charging_possible=False)
+        G.add_node("Stop25", type="stop", charging_possible=False)
+        G.add_node("Stop26", type="stop", charging_possible=False)
 
         G.add_edge("Depot1", "Stop1", distance=3)
-        G.add_edge("Stop1", "Stop2", distance=4)
-        G.add_edge("Stop2", "Stop3", distance=2)
-        G.add_edge("Stop3", "Stop4", distance=5)
-        G.add_edge("Stop4", "Stop2", distance=4)
-        G.add_edge("Depot1", "Stop4", distance=6)
-        G.add_edge("Stop1", "Stop3", distance=3)
+        G.add_edge("Depot1", "Stop12", distance=2)
+        G.add_edge("Depot1", "Stop10", distance=3)
+        G.add_edge("Depot1", "Stop9", distance=2)
+        G.add_edge("Depot1", "Stop14", distance=4)
+        G.add_edge("Depot1", "Stop15", distance=4)
+
+        G.add_edge("Depot2", "Stop10", distance=3)
+        G.add_edge("Depot2", "Stop14", distance=3)
+        G.add_edge("Depot2", "Stop15", distance=6)
+        G.add_edge("Depot2", "Stop18", distance=4)
+        G.add_edge("Depot2", "Stop22", distance=2)
+        G.add_edge("Depot2", "Stop1", distance=3)
+
+        # Here i have to create the edges between the stops
 
         return G
 
@@ -688,19 +719,19 @@ class data:
             "r11": [2, 13, 13],
             "r12": [4, 8, 8],
             "r13": [4, 7, 7],
-            "r14": [4, 7, 9, 9, 7],
+            "r14": [4, 8, 9, 9, 8],
             "r15": [3, 9, 9],
             "r16": [3, 15, 15],
             "r17": [3, 14, 14],
-            "r18": [3, 13, 13],
+            "r18": [3, 15, 15],
             "r19": [3, 14, 14],
             "r20": [4, 12, 12],
             "r21": [4, 18, 2, 2, 18],
             "r22": [3, 9, 9],
             "r23": [2, 6, 6],
             "r24": [6, 10, 6, 6, 10],
-            "r25": [6, 10, 7, 7, 10],
-            "r26": [6, 21, 21]
+            "r25": [6, 10, 6, 6, 10],
+            "r26": [4, 21, 21]
         }
         return distance_r # distance of each stop in route r
 

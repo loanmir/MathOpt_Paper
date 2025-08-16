@@ -14,6 +14,8 @@
 - T_j considers feasible only the same stops 
 - route22 is the only different one from the papare dataset
 
+- Route 14, 18, 25, 26 changed distances to be consistent with model (all the distances are equal now)
+
 
 ### Questions
 
