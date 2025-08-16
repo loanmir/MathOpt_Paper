@@ -4,9 +4,18 @@ import gurobipy as gb
 import numpy as np
 import data_inizialization as di
 import networkx as nx
+from data import data
 from instance import OptimizationInstance
 
-instance = OptimizationInstance()
+data_obj = data(
+    n_types_chargers=1,
+    n_types_elec_buses=3,
+    n_types_non_battery_buses=2,
+    up_j_value=3,
+    uc_c_value=5
+)
+
+instance = OptimizationInstance(data_obj)
 model = instance.solve()
 
 

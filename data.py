@@ -60,6 +60,20 @@ class data:
         self.nob_rb = self.create_nob_rb()  # Create the initial number of old electric buses on route r
         self.nob_rbc = self.create_nob_rbc()  # Create the initial number of old electric buses on route r for each charging type c
 
+        self.dem_r = self.create_dem_r()
+        self.pi_r = self.create_pi_r()
+        self.d_r = self.create_d_r()
+        self.L_r = self.create_L_r()
+        self.distance_r = self.create_distance_r()
+        self.S_rbc_s = self.create_S_rbc_s()
+        self.n_rbc = self.create_n_rbc()
+        self.R_jc = self.create_R_jc()
+        self.nc_jrc_max = self.create_nc_jrc_max()
+        self.noc_jrc_ct = self.create_noc_jrc_ct()
+        self.dem_0_r = self.create_dem_0_r()
+        self.ub_rb = self.create_ub_rb()
+
+
     def create_graph(self):
         """
         Create a graph with nodes and edges representing depots and stops.
