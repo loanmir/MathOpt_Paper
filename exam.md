@@ -17,6 +17,8 @@
 - Route 14, 18, 25, 26 changed distances to be consistent with model (all the distances are equal now)
 - Added all conncetions in the graph (stops 24-26 do not have connections for the routes we have chosen -> problem?)
 
+- Problem: when increasing the types of chargers we might get unfeasibility. Why???
+
 
 ### Questions
 

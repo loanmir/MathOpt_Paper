@@ -8,8 +8,8 @@ from data import data
 from instance import OptimizationInstance
 
 data_obj = data(
-    n_types_chargers=10,
-    n_types_elec_buses=100,
+    n_types_chargers=5,
+    n_types_elec_buses=10,
     n_types_non_battery_buses=3,
     up_j_value=20,
     uc_c_value=60
@@ -17,7 +17,7 @@ data_obj = data(
 
 instance = OptimizationInstance(data_obj)
 
-model = instance.solve()
+model = instance.solve_algorithm()
 
 if model.status == gb.GRB.INFEASIBLE:
     print("Model is infeasible. Computing IIS...")

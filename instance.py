@@ -682,16 +682,14 @@ class OptimizationInstance:
 
             # Other constraints defined directly in variables (!?)
     # Solving method
-    def solve(self):
+    def solve_algorithm(self):
         self.model.optimize()
 
-        # After model creation, before optimize()
         print("Model statistics:")
         print(f"Variables: {self.model.NumVars}")
         print(f"Constraints: {self.model.NumConstrs}")
         print(f"Objective terms: {self.model.NumObj}")
 
-        # Add parameter values check
         print("\nKey parameters:")
         print(f"Number of routes: {len(self.R)}")
         print(f"Number of buses: {len(self.B)}")
@@ -707,6 +705,12 @@ class OptimizationInstance:
             self.infeasible_constraints = []
 
         return self.model
+
+    def solve_heuristic_HR(self):
+        pass
+
+    def solve_heuristic_HRBC(self):
+        pass
 
     def get_solution_values(self):
         return {v.VarName: v.X for v in self.model.getVars()}
