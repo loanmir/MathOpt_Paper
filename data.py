@@ -16,7 +16,7 @@ class data:
         self.n_old_charging_devices_per_stop = 2 # Number of old charging devices per stop
         self.n_old_non_battery_buses_per_route = 2 # Number of old non-battery buses per route
         self.n_old_elec_buses_per_route = 2  # Number of old electric buses per route
-        self.lt_r_global = 10 # lower bound on traffic interval of route r
+        self.lt_r_global = 4 # lower bound on traffic interval of route r
         self.ut_r_global = 20 # upper bound on traffic interval of route r
         self.G = self.create_graph()  # Create the graph with nodes and edges
         self.R = self.create_R_set()  # Create the set of routes
