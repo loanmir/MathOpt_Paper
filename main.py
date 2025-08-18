@@ -8,17 +8,39 @@ from data import data
 from instance import OptimizationInstance
 
 data_obj = data(
-    n_types_chargers=1,
-    n_types_elec_buses=3,
+    n_types_chargers=2,
+    n_types_elec_buses=6,
     n_types_non_battery_buses=2,
-    up_j_value=3,
-    uc_c_value=5
+    up_j_value=10,
+    uc_c_value=15
 )
 
 instance = OptimizationInstance(data_obj)
+
 model = instance.solve()
 
+if model.status == gb.GRB.INFEASIBLE:
+    print("Model is infeasible. Computing IIS...")
+    model.computeIIS()
+    model.write("model.ilp")  # Writes an IIS file you can open in a text editor
 
+    print("Constraints in IIS:")
+    for c in model.getConstrs():
+        if c.IISConstr:
+            print(f" - {c.ConstrName}")
+
+    print("Variable bounds in IIS:")
+    for v in model.getVars():
+        if v.IISLB:
+            print(f" - {v.VarName} has IIS lower bound")
+        if v.IISUB:
+            print(f" - {v.VarName} has IIS upper bound")
+
+
+
+
+
+"""
 if model.status == gb.GRB.INFEASIBLE:
     print("Model is infeasible. Computing IIS...")
     print("Infeasible constraints:")
@@ -31,7 +53,7 @@ elif model.status == gb.GRB.OPTIMAL:
         print(f"{name}: {value}")
 else:
     print(f"Model status: {model.status}")
-
+"""
 
 '''
 

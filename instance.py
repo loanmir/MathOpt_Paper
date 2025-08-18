@@ -684,6 +684,19 @@ class OptimizationInstance:
     # Solving method
     def solve(self):
         self.model.optimize()
+
+        # After model creation, before optimize()
+        print("Model statistics:")
+        print(f"Variables: {self.model.NumVars}")
+        print(f"Constraints: {self.model.NumConstrs}")
+        print(f"Objective terms: {self.model.NumObj}")
+
+        # Add parameter values check
+        print("\nKey parameters:")
+        print(f"Number of routes: {len(self.R)}")
+        print(f"Number of buses: {len(self.B)}")
+        print(f"Number of chargers: {len(self.C)}")
+
         if self.model.status == gb.GRB.INFEASIBLE:
             self.model.computeIIS()
             self.model.write("model.ilp")  # Optional: write model to inspect later

@@ -8,16 +8,16 @@ import math
 
 
 class data:
-    def __init__(self, n_types_chargers=1, n_types_elec_buses=3, n_types_non_battery_buses=2, up_j_value=3, uc_c_value=5):
+    def __init__(self, n_types_chargers=1, n_types_elec_buses=3, n_types_non_battery_buses=2, up_j_value=5, uc_c_value=15):
         self.n_types_chargers = n_types_chargers
         self.n_types_elec_buses = n_types_elec_buses
         self.n_types_non_battery_buses = n_types_non_battery_buses
         self.n_old_charging_plugs_per_stop = 2  # Number of old charging plugs per stop
         self.n_old_charging_devices_per_stop = 2 # Number of old charging devices per stop
-        self.n_old_non_battery_buses_per_route = 1 # Number of old non-battery buses per route
-        self.n_old_elec_buses_per_route = 1  # Number of old electric buses per route
-        self.lt_r_global = 9 # lower bound on traffic interval of route r
-        self.ut_r_global = 13 # upper bound on traffic interval of route r
+        self.n_old_non_battery_buses_per_route = 2 # Number of old non-battery buses per route
+        self.n_old_elec_buses_per_route = 2  # Number of old electric buses per route
+        self.lt_r_global = 10 # lower bound on traffic interval of route r
+        self.ut_r_global = 20 # upper bound on traffic interval of route r
         self.G = self.create_graph()  # Create the graph with nodes and edges
         self.R = self.create_R_set()  # Create the set of routes
         self.D = self.create_D_set()  # Create the set of depots
@@ -85,7 +85,7 @@ class data:
         G.add_node("Stop1", type="stop", charging_possible=True)
         G.add_node("Stop2", type="stop", charging_possible=True)
         G.add_node("Stop3", type="stop", charging_possible=False)
-        G.add_node("Stop4", type="stop", charging_possible=False)
+        #G.add_node("Stop4", type="stop", charging_possible=False)
         G.add_node("Stop5", type="stop", charging_possible=True)
         G.add_node("Stop6", type="stop", charging_possible=True)
         G.add_node("Stop7", type="stop", charging_possible=True)
@@ -101,13 +101,13 @@ class data:
         G.add_node("Stop17", type="stop", charging_possible=True)
         G.add_node("Stop18", type="stop", charging_possible=True)
         G.add_node("Stop19", type="stop", charging_possible=True)
-        G.add_node("Stop20", type="stop", charging_possible=False)
-        G.add_node("Stop21", type="stop", charging_possible=False)
-        G.add_node("Stop22", type="stop", charging_possible=False)
-        G.add_node("Stop23", type="stop", charging_possible=False)
-        G.add_node("Stop24", type="stop", charging_possible=False)
-        G.add_node("Stop25", type="stop", charging_possible=False)
-        G.add_node("Stop26", type="stop", charging_possible=False)
+        G.add_node("Stop20", type="stop", charging_possible=True)
+        #G.add_node("Stop21", type="stop", charging_possible=False)
+        G.add_node("Stop22", type="stop", charging_possible=True)
+        G.add_node("Stop23", type="stop", charging_possible=True)
+        #G.add_node("Stop24", type="stop", charging_possible=False)
+        #G.add_node("Stop25", type="stop", charging_possible=False)
+        #G.add_node("Stop26", type="stop", charging_possible=False)
 
         G.add_edge("Depot1", "Stop1", distance=3)
         G.add_edge("Depot1", "Stop12", distance=2)
@@ -123,7 +123,50 @@ class data:
         G.add_edge("Depot2", "Stop22", distance=2)
         G.add_edge("Depot2", "Stop1", distance=3)
 
-        # Here i have to create the edges between the stops
+        # Edges between the stops
+
+        G.add_edge("Stop1", "Stop8", distance=5)
+        G.add_edge("Stop1", "Stop2", distance=9)
+        G.add_edge("Stop1", "Stop5", distance=5)
+        G.add_edge("Stop1", "Stop7", distance=11)
+
+        G.add_edge("Stop2", "Stop23", distance=6)
+        G.add_edge("Stop2", "Stop3", distance=4)
+        G.add_edge("Stop2", "Stop15", distance=10)
+        G.add_edge("Stop2", "Stop18", distance=18)
+        G.add_edge("Stop2", "Stop20", distance=2)
+
+        #G.add_edge("Stop3", "Stop4", distance=6)
+
+        G.add_edge("Stop5", "Stop6", distance=4)
+
+        G.add_edge("Stop6", "Stop7", distance=4)
+
+        G.add_edge("Stop8", "Stop9", distance=4)
+
+        G.add_edge("Stop9", "Stop10", distance=5)
+
+        G.add_edge("Stop10", "Stop11", distance=13)
+        G.add_edge("Stop10", "Stop7", distance=9)
+        G.add_edge("Stop10", "Stop16", distance=14)
+
+        G.add_edge("Stop11", "Stop14", distance=9)
+
+        G.add_edge("Stop12", "Stop13", distance=13)
+
+        G.add_edge("Stop13", "Stop14", distance=7)
+
+        G.add_edge("Stop14", "Stop17", distance=14)
+        G.add_edge("Stop14", "Stop16", distance=15)
+        G.add_edge("Stop14", "Stop15", distance=8)
+
+        G.add_edge("Stop15", "Stop22", distance=6)
+
+        G.add_edge("Stop16", "Stop18", distance=21)
+
+        G.add_edge("Stop18", "Stop19", distance=12)
+
+        # G.add_edge("Stop20", "Stop21", distance=6)
 
         return G
 
@@ -254,7 +297,7 @@ class data:
         target_length = self.n_types_elec_buses + self.n_types_non_battery_buses
 
         # Base capacities for electric and non-battery vehicles
-        base_capacities = [90, 87, 85, 70, 80]
+        base_capacities = [120, 137, 125, 150, 110]
         
         # Calculate how many complete repetitions we need
         repetitions = target_length // len(base_capacities)
@@ -290,7 +333,7 @@ class data:
         Returns:
             dict: Dictionary mapping bus types to their maximum driving range
         """
-        base_distances = [15, 20, 40, 25, 15, 15]
+        base_distances = [8, 35, 20, 27, 20]
         
         d_b_MAX = {}
         for i, bus in enumerate(self.B):
@@ -316,7 +359,7 @@ class data:
                     for bus in self.B:
                         ct_rjbc[r][stop][bus] = {}
                         for c in self.C:
-                            ct_rjbc[r][stop][bus][c] = 25
+                            ct_rjbc[r][stop][bus][c] = 20
         return ct_rjbc # charging Time of b-type electric bus at c-type charging point of stop j on route r
 
     
@@ -361,16 +404,7 @@ class data:
             list: List of tuples (capital cost, operational cost) for each charging type
         """
         cc_uoc_pairs = [
-            (1.07e8, 5e6),  # Example values for capital and operational costs
-            (1.5e7, 7e6),
-            (2e7, 1.07e7),
-            (3e7, 1.5e7),
-            (4e7, 2e7),
-            (1.8e7, 9e6),
-            (2.2e7, 1.1e7),
-            (2.4e7, 1.2e7),
-            (2.6e7, 1.3e7),
-            (2.8e7, 1.4e7),
+            (1.07e10, 5e9)
         ]
         return cc_uoc_pairs
 
@@ -618,32 +652,32 @@ class data:
             dict: Dictionary mapping each route to a list of stops in that route
         """
         pi_r = {
-            "r1": ["stop1", "stop2", "stop1"],
-            "r2": ["stop1", "stop2", "stop3", "stop2", "stop1"],
-            "r3": ["stop1", "stop2", "stop2", "stop2", "stop1"],
-            "r4": ["stop1", "stop5", "stop1"],
-            "r5": ["stop1", "stop5", "stop6", "stop5", "stop1"],
-            "r6": ["stop1", "stop7", "stop1"],
-            "r7": ["stop1", "stop8", "stop9", "stop8", "stop1"],
-            "r8": ["stop9", "stop10", "stop11", "stop10", "stop9"],
-            "r9": ["stop10", "stop7", "stop10"],
-            "r10": ["stop10", "stop7", "stop10"],
-            "r11": ["stop12", "stop13", "stop12"],
-            "r12": ["stop14", "stop15", "stop14"],
-            "r13": ["stop14", "stop13", "stop14"],
-            "r14": ["stop15", "stop14", "stop11", "stop14", "stop15"],
-            "r15": ["stop14", "stop11", "stop14"],
-            "r16": ["stop14", "stop16", "stop14"],
-            "r17": ["stop10", "stop16", "stop10"],
-            "r18": ["stop14", "stop16", "stop14"],
-            "r19": ["stop14", "stop17", "stop14"],
-            "r20": ["stop18", "stop19", "stop18"],
-            "r21": ["stop18", "stop2", "stop20", "stop2", "stop18"],
-            "r22": ["stop1", "stop2", "stop1"],
-            "r23": ["stop22", "stop15", "stop22"],
-            "r24": ["stop15", "stop2", "stop23", "stop2", "stop15"],
-            "r25": ["stop15", "stop2", "stop23", "stop2", "stop15"],
-            "r26": ["stop18", "stop16", "stop18"],
+            "r1": ["Stop1", "Stop2", "Stop1"],
+            "r2": ["Stop1", "Stop2", "Stop3", "Stop2", "Stop1"],
+            "r3": ["Stop1", "Stop2", "Stop2", "Stop2", "Stop1"],
+            "r4": ["Stop1", "Stop5", "Stop1"],
+            "r5": ["Stop1", "Stop5", "Stop6", "Stop5", "Stop1"],
+            "r6": ["Stop1", "Stop7", "Stop1"],
+            "r7": ["Stop1", "Stop8", "Stop9", "Stop8", "Stop1"],
+            "r8": ["Stop9", "Stop10", "Stop11", "Stop10", "Stop9"],
+            "r9": ["Stop10", "Stop7", "Stop10"],
+            "r10": ["Stop10", "Stop7", "Stop10"],
+            "r11": ["Stop12", "Stop13", "Stop12"],
+            "r12": ["Stop14", "Stop15", "Stop14"],
+            "r13": ["Stop14", "Stop13", "Stop14"],
+            "r14": ["Stop15", "Stop14", "Stop11", "Stop14", "Stop15"],
+            "r15": ["Stop14", "Stop11", "Stop14"],
+            "r16": ["Stop14", "Stop16", "Stop14"],
+            "r17": ["Stop10", "Stop16", "Stop10"],
+            "r18": ["Stop14", "Stop16", "Stop14"],
+            "r19": ["Stop14", "Stop17", "Stop14"],
+            "r20": ["Stop18", "Stop19", "Stop18"],
+            "r21": ["Stop18", "Stop2", "Stop20", "Stop2", "Stop18"],
+            "r22": ["Stop1", "Stop2", "Stop1"],
+            "r23": ["Stop22", "Stop15", "Stop22"],
+            "r24": ["Stop15", "Stop2", "Stop23", "Stop2", "Stop15"],
+            "r25": ["Stop15", "Stop2", "Stop23", "Stop2", "Stop15"],
+            "r26": ["Stop18", "Stop16", "Stop18"],
         }  # route r cycle
         return pi_r  # stop sequence of route r
 
