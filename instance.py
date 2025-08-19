@@ -199,12 +199,14 @@ class OptimizationInstance:
         for cc, uoc in self.cc_uoc_pairs:
             m.addConstr(
                 (
-                        gb.quicksum(self.csta_j * self.ns_j[j] for j in self.N) +
-                        gb.quicksum(self.ccp_c * self.np_jc[j, c] for j in self.N for c in self.C) +
-                        gb.quicksum(gb.quicksum(
-                            self.cbus_b[b] * gb.quicksum(self.nb_rbc[r, b, c] for c in self.C_b[b]) for b in
-                            self.B_r[r]) for r in self.R) +
-                        gb.quicksum(self.ccps_t * self.beta_t[t] for t in self.T if t not in self.TO) +
+                    
+                        #gb.quicksum(self.csta_j * self.ns_j[j] for j in self.N) +
+                        #gb.quicksum(self.ccp_c * self.np_jc[j, c] for j in self.N for c in self.C) +
+                        #gb.quicksum(gb.quicksum(
+                        #    self.cbus_b[b] * gb.quicksum(self.nb_rbc[r, b, c] for c in self.C_b[b]) for b in
+                        #    self.B_r[r]) for r in self.R) +
+                        #gb.quicksum(self.ccps_t * self.beta_t[t] for t in self.T if t not in self.TO) +
+                        
                         gb.quicksum(
                             self.vcc_j * self.ns_j[j] + gb.quicksum(self.vcp_c * self.np_jc[j, c] for c in self.C)
                             for j in self.N) +

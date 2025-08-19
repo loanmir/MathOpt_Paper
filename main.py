@@ -8,7 +8,7 @@ from data import data
 from instance import OptimizationInstance
 
 data_obj = data(
-    n_types_chargers=5,
+    n_types_chargers=2,
     n_types_elec_buses=10,
     n_types_non_battery_buses=3,
     up_j_value=20,

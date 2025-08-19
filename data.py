@@ -16,7 +16,7 @@ class data:
         self.n_old_charging_devices_per_stop = 2 # Number of old charging devices per stop
         self.n_old_non_battery_buses_per_route = 2 # Number of old non-battery buses per route
         self.n_old_elec_buses_per_route = 2  # Number of old electric buses per route
-        self.lt_r_global = 4 # lower bound on traffic interval of route r
+        self.lt_r_global = 1 # lower bound on traffic interval of route r
         self.ut_r_global = 20 # upper bound on traffic interval of route r
         self.G = self.create_graph()  # Create the graph with nodes and edges
         self.R = self.create_R_set()  # Create the set of routes
@@ -41,14 +41,14 @@ class data:
         self.vcc_j = 500  # VARIABLE COST of one charger at stop j
         self.ccps_t = 200000  # CAPITAL COST of a power station at t
         self.cl_tj = 5000  # cost of linking power station spot t and stop j -> cl_tj = 0 if t is old and j has an old charger stop
-        self.cc_uoc_pairs = self.create_cc_uoc_pairs()  # Create the capital and operational costs for each charging type
+        self.cc_uoc_pairs = self.create_cc_uoc_pairs()  # Create the capital and operational costs
         self.csta_j = 100000  # capital cost of a recharging station at stop j (considered constant for all j)
         self.B_r = self.create_B_r()  # Create the mapping of routes to electric bus types
         self.V_r = self.create_V_r()  # Create the mapping of routes to non-battery vehicle types
         self.C_b = self.create_C_b()  # Create the mapping of bus types to charging types
         self.B_rc = self.create_B_rc()  # Create the mapping of routes to bus types and charging types
         self.BO_rc = self.create_BO_rc()  # Create the old electric bus types for each route and charging type
-        self.co_b = self.create_co_b()  # Create the operational costs for each bus type
+        self.co_b = self.create_co_b()  # Create mapping between bus types and their required charging types
         self.nod_jc = self.create_nod_jc()  # Create the number of old c-type plugs devices at stop j
         self.nop_jc = self.create_nop_jc()  # Create the number of old c-type charging points at stop j
         self.up_j = self.create_up_j(up_j_value)  # Define the upper limit for the number of charging points at stop j
@@ -398,13 +398,13 @@ class data:
     # COST INPUTS (considered constant for all c types (one at the moment) and all j stops)
     def create_cc_uoc_pairs(self):
         """
-        Create a list of tuples representing the capital and operational costs for each charging type.
+        Create a list of tuples representing the capital and operational.
         
         Returns:
-            list: List of tuples (capital cost, operational cost) for each charging type
+            list: List of tuples (capital cost, operational cost)
         """
         cc_uoc_pairs = [
-            (1.07e10, 5e9)
+            (1.07e8, 5e8)
         ]
         return cc_uoc_pairs
 
