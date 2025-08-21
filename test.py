@@ -4,15 +4,22 @@ from instance import OptimizationInstance
 
 data_obj = data(
     n_types_chargers=2,
-    n_types_elec_buses=3,
+    n_types_elec_buses=10,
     n_types_non_battery_buses=2,
-    up_j_value=20,
-    uc_c_value=30
+    up_j_value=10,
+    uc_c_value=15
 )
 
 instance1 = OptimizationInstance(data_obj)
 instance2 = OptimizationInstance(data_obj)
 instance3 = OptimizationInstance(data_obj)
+
+# Set parameters
+for instance in [instance1]:
+    instance.model.setParam('OutputFlag', 1)
+    instance.model.setParam('MIPGap', 0)
+    instance.model.setParam('IntFeasTol', 1e-9)
+    instance.model.setParam('FeasibilityTol', 1e-9)
 
 model_algorithm = instance1.solve_algorithm()
 
@@ -45,5 +52,5 @@ if (model_algorithm.status == gb.GRB.OPTIMAL and
     print("\nSolution Comparison:")
     print(f"Algorithm objective: {model_algorithm.ObjVal}")
     print(f"HR heuristic objective: {model_HR.ObjVal}")
-    gap = ((model_HR.ObjVal - model_algorithm.ObjVal)/model_algorithm.ObjVal)*100
-    print(f"HR gap vs optimal: {gap:.2f}%")
+    gap = ((model_algorithm.ObjVal - model_HR.ObjVal)/model_algorithm.ObjVal)*100
+    print(f"HR gap vs optimal: {gap:.5f}%")

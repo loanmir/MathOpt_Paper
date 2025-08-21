@@ -404,7 +404,7 @@ class data:
             list: List of tuples (capital cost, operational cost)
         """
         cc_uoc_pairs = [
-            (100.07e6, 29e7)
+            (4e7, 2e8)
         ]
         return cc_uoc_pairs
 
