@@ -1,24 +1,9 @@
-import math
-from re import S
-import gurobipy as gb
-import numpy as np
-import data_inizialization as di
-import networkx as nx
 from data import data
-from instance import OptimizationInstance
 import random
 
 
 
 # HEURISTIC HR
-
-data_obj = data(
-    n_types_chargers=10,
-    n_types_elec_buses=10,
-    n_types_non_battery_buses=3,
-    up_j_value=20,
-    uc_c_value=60
-)
 
 def route_costs(data_obj: data, route, buses_on_route):
     # .items() give the key value couples
@@ -39,56 +24,65 @@ def total_costs(data_obj: data, assignment):
     return cap, op
 
 
-def generate_feasible_RHR(data_obj: data, cap_budget, op_budget, seed=None):
+def generate_feasible_R_hr(data_obj: data, cap_budget, op_budget, seed=None):
     """
-    Start with all old buses on all routes, then randomly remove buses until budgets are ok.
-    Returns: 
-      - RHR (set of active routes)
-      - assignment {r: {b: n_buses}}
+    Generate feasible route set by removing candidate buses from randomly chosen routes.
+    Maintains old buses in all routes.
     """
     rng = random.Random(seed)
 
-    # initial assignment: old electric buses on each route
-    assignment = data_obj.nob_rb
+    # Initial assignment: include both old and new buses
+    assignment = {}
+    for r in data_obj.R:
+        assignment[r] = {}
+        # Add old buses (these stay fixed)
+        for b in data_obj.BO:
+            if b in data_obj.nob_rb[r]:
+                assignment[r][b] = data_obj.nob_rb[r][b]
+        # Add candidate new buses
+        for b in data_obj.B_r[r]:
+            if b not in data_obj.BO:
+                assignment[r][b] = data_obj.ub_rb[r][b]
 
+    # Initial set of routes that can have new buses
+    R_hr = set(data_obj.R)
     cap, op = total_costs(data_obj, assignment)
+    
+    print(f"Initial costs - Capital: {cap}, Operating: {op}")
+    print(f"Budgets - Capital: {cap_budget}, Operating: {op_budget}")
 
-    # while over budget, randomly remove a bus
+    # While over budget, randomly remove new buses from routes
     while (cap > cap_budget or op > op_budget):
-        # pick random route that still has buses
-        non_empty_routes = [r for r, buses in assignment.items() if sum(buses.values()) > 0]
-        if not non_empty_routes:
-            break  # nothing left to remove → infeasible
-        r = rng.choice(non_empty_routes)
-
-        # pick a random bus type from that route
-        bus_types = [b for b, n in assignment[r].items() if n > 0]
-        b = rng.choice(bus_types)
-
-        # remove one bus
-        assignment[r][b] -= 1
-        if assignment[r][b] == 0:
-            del assignment[r][b]
-
-        # recompute costs
+        if not R_hr:
+            raise ValueError("Cannot find feasible solution")
+        
+        # Randomly select a route to remove from consideration
+        route_to_remove = rng.choice(list(R_hr))
+        
+        # Remove only new candidate buses from this route
+        for bus in list(assignment[route_to_remove].keys()):
+            if bus not in data_obj.BO:  # Keep old buses
+                assignment[route_to_remove][bus] = 0
+            
+        # Remove route from active set
+        R_hr.remove(route_to_remove)
+        
         cap, op = total_costs(data_obj, assignment)
+        print(f"Removed new buses from {route_to_remove} - New costs: Capital={cap}, Operating={op}")
+    
+    return R_hr
 
-    # routes with at least one bus left are in RHR
-    RHR = {r for r, buses in assignment.items() if sum(buses.values()) > 0}
-
-    return RHR, assignment
-
-def force_contraint_y_r(model, data_obj: data, RHR, ):
+def force_contraint_y_r(instance, data_obj: data, R_hr):
 
     for r in data_obj.R:
-        if r in RHR:
-            model.addConstr(
-                model.y_r[r] == 1,
+        if r in R_hr:
+            instance.model.addConstr(
+                instance.y_r[r] == 1,
                 name=f"force_y_r_{r}"
             )
         else:
-            model.addConstr(
-                model.y_r[r] == 0,
+            instance.model.addConstr(
+                instance.y_r[r] == 0,
                 name=f"force_y_r_{r}"
             )
 

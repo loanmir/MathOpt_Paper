@@ -1,6 +1,8 @@
 import gurobipy as gb
 import data_inizialization as di
 from gurobipy import Model
+import heuristics as he
+from data import data
 #from data import G, R, D, N, NO, T, T_j, TO, TO_j, B, BO, C, cap_b, B_r, C_b, pi_r, dem_r, dem_0_r, ub_rb, nv_rb_0, V_r, co_b, n_rbc, cc_uoc_pairs, csta_j, ccp_c, cbus_b, ccps_t, cl_tj, vcc_j, vcp_c, vcb_rb, nod_jc, utp_t, p_c, up_j, nop_jc, uc_c, R_jc, L_r, ut_r, lt_r, nob_rb, nob_rbc, B_rc, ct_rjbc, nc_jrc_max, noc_jrc_ct, S_rbc_s
 
 # REMEMBER!! -> Most of data will be taken from the data.py file -> So we will need to remove the "self." every time we access some input(CONSTANT)
@@ -8,7 +10,7 @@ from gurobipy import Model
 
 
 class OptimizationInstance:
-    def __init__(self, data_obj):
+    def __init__(self, data_obj: data):
         self.model = Model("Electric_Bus_Model")
         self.data = data_obj
 
@@ -687,16 +689,6 @@ class OptimizationInstance:
     def solve_algorithm(self):
         self.model.optimize()
 
-        print("Model statistics:")
-        print(f"Variables: {self.model.NumVars}")
-        print(f"Constraints: {self.model.NumConstrs}")
-        print(f"Objective terms: {self.model.NumObj}")
-
-        print("\nKey parameters:")
-        print(f"Number of routes: {len(self.R)}")
-        print(f"Number of buses: {len(self.B)}")
-        print(f"Number of chargers: {len(self.C)}")
-
         if self.model.status == gb.GRB.INFEASIBLE:
             self.model.computeIIS()
             self.model.write("model.ilp")  # Optional: write model to inspect later
@@ -709,7 +701,12 @@ class OptimizationInstance:
         return self.model
 
     def solve_heuristic_HR(self):
-        pass
+        cap_budget = self.cc_uoc_pairs[0][0]
+        op_budget = self.cc_uoc_pairs[0][1]
+        R_hr = he.generate_feasible_R_hr(self.data, cap_budget= cap_budget, op_budget=op_budget)
+        he.force_contraint_y_r(self, self.data, R_hr)
+        self.model.optimize()
+        return self.model
 
     def solve_heuristic_HRBC(self):
         pass

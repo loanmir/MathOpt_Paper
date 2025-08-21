@@ -16,7 +16,7 @@ class data:
         self.n_old_charging_devices_per_stop = 2 # Number of old charging devices per stop
         self.n_old_non_battery_buses_per_route = 2 # Number of old non-battery buses per route
         self.n_old_elec_buses_per_route = 2  # Number of old electric buses per route
-        self.lt_r_global = 1 # lower bound on traffic interval of route r
+        self.lt_r_global = 4 # lower bound on traffic interval of route r
         self.ut_r_global = 20 # upper bound on traffic interval of route r
         self.G = self.create_graph()  # Create the graph with nodes and edges
         self.R = self.create_R_set()  # Create the set of routes
@@ -404,7 +404,7 @@ class data:
             list: List of tuples (capital cost, operational cost)
         """
         cc_uoc_pairs = [
-            (1.07e8, 5e8)
+            (100.07e6, 29e7)
         ]
         return cc_uoc_pairs
 
@@ -837,8 +837,6 @@ class data:
                     else:
                         n_rbc[(r, b, c)] = 1  # One scenario with both stops
 
-        # print(f"Number of scenarios for each (r, b, c): {n_rbc}")
-
         return n_rbc  # number of scenarios for each (r, b, c)
 
 
@@ -942,7 +940,6 @@ class data:
         dem_0_r = self.create_dem_0_r()  # passenger capacity of route r to be satisfied by new electric buses and remaining non-battery vehicles
     
         ub_rb = {
-            # {1: {'busA': 3}},
         }  # upper bound on the number of new b-type electric buses
         for r in self.R:
             ub_rb[r] = {}  # Initialize ub_rb for each route r
