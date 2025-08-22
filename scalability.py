@@ -60,9 +60,9 @@ def run_scalability(scaling_steps=4):
     for step in range(1, scaling_steps + 1):
         # Scale problem size (increase bus/charger counts etc.)
         data_obj = data(
-            n_types_chargers=2,
+            n_types_chargers=4,
             n_types_elec_buses= 10 + ((step-1) * 3),
-            n_types_non_battery_buses= 2 + ((step-1) * 3),
+            n_types_non_battery_buses= 3 + ((step-1)*0),
             up_j_value=10,
             uc_c_value=15,
         )
