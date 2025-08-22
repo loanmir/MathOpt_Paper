@@ -701,8 +701,8 @@ class OptimizationInstance:
         return self.model
 
     def solve_heuristic_HR(self):
-        R_hr = he.generate_feasible_R_hr(self.data)
-        he.force_contraint_y_r(self, self.data, R_hr)
+        R_hr, ub_rb = he.generate_feasible_R_hr(self.data)
+        he.force_contraint_y_r(self, self.data, R_hr, ub_rb)
         self.model.optimize()
         return self.model
 

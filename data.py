@@ -13,7 +13,7 @@ class data:
         self.n_types_elec_buses = n_types_elec_buses
         self.n_types_non_battery_buses = n_types_non_battery_buses
         self.n_old_charging_plugs_per_stop = 2  # Number of old charging plugs per stop
-        self.n_old_charging_devices_per_stop = 2 # Number of old charging devices per stop
+        self.n_old_charging_devices_per_stop = 3 # Number of old charging devices per stop
         self.n_old_non_battery_buses_per_route = 4 # Number of old non-battery buses per route
         self.n_old_elec_buses_per_route = 0  # Number of old electric buses per route
         self.lt_r_global = 2 # lower bound on traffic interval of route r
