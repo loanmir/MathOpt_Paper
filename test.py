@@ -1,6 +1,7 @@
 import gurobipy as gb
 from data import data
 from instance import OptimizationInstance
+from scalability import run_scalability
 
 data_obj = data(
     n_types_chargers=2,
