@@ -21,7 +21,6 @@
 
 
 ### Questions
-
 1) differences between nc_jrc and nc_jrc_ct (page 14 over constraint 31)
     1b) Should we compute nc_jc as in the paper? BUT it is a decision variable!?!?!?
 
@@ -43,6 +42,11 @@
 9) Ask for L_r -> it says that L_r = ut_r * number of all old vehicles operating on this route!
 
 usare network x per generare una rete per caso base
+
+
+#### New questions
+1) Heuristics how to implement maintaining fisability?
+2) Should we rework all the data class so that it creates a copy of the dataset used in the paper? Maybe changing only the cc_uoc costs couple?
 
 ### TO DO LIST
 

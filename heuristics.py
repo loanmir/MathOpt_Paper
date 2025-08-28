@@ -116,11 +116,12 @@ def force_contraint_y_r(instance, data_obj: data, R_hr, ub_rb):
                 instance.y_r[r] == 0,
                 name=f"force_y_r_{r}"
             )
-            
+
+            """
             for b in data_obj.B_r[r]:
                 for c in data_obj.C_b[b]:
                     instance.nb_rbc[r, b, c].UB = 0
                     instance.y_rbc[r, b, c].UB = 0
                     for s in range(1, data_obj.n_rbc.get((r,b,c), 0) + 1):
                         instance.y_rbc_s[r, b, c, s].UB = 0
-
+            """
