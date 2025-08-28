@@ -39,19 +39,6 @@ def solve_and_print_details(model, name):
             if c.IISConstr:
                 print(f" - {c.ConstrName}")
 
-model_HR = instance2.solve_heuristic_HR()
-
-model_HRBC = instance3.solve_heuristic_HRBC()
 
 # Print results
 solve_and_print_details(model_algorithm, "Algorithm")
-solve_and_print_details(model_HR, "HR Heuristic")
-
-# Compare solutions if both are feasible
-if (model_algorithm.status == gb.GRB.OPTIMAL and 
-    model_HR.status == gb.GRB.OPTIMAL):
-    print("\nSolution Comparison:")
-    print(f"Algorithm objective: {model_algorithm.ObjVal}")
-    print(f"HR heuristic objective: {model_HR.ObjVal}")
-    gap = ((model_algorithm.ObjVal - model_HR.ObjVal)/model_algorithm.ObjVal)*100
-    print(f"HR gap vs optimal: {gap:.5f}%")

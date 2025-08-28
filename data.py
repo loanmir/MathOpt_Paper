@@ -1,6 +1,8 @@
 import networkx as nx
 import data_inizialization as di
 import math
+import random
+import copy
 
 # ================================
 # 1. GRAPH CREATION
@@ -8,17 +10,20 @@ import math
 
 
 class data:
-    def __init__(self, n_types_chargers=1, n_types_elec_buses=3, n_types_non_battery_buses=2, up_j_value=5, uc_c_value=15):
+    def __init__(self, cc_ouc_pair_list=[(4e7, 2e8)], n_types_chargers=1, n_types_elec_buses=3, n_types_non_battery_buses=2, n_depots=2, n_stops=25, n_routes=26, up_j_value=5, uc_c_value=15, seed=42):
+        self.rng = random.Random(seed)
         self.n_types_chargers = n_types_chargers
         self.n_types_elec_buses = n_types_elec_buses
         self.n_types_non_battery_buses = n_types_non_battery_buses
+        self.n_routes = n_routes
+        self.seed = seed
         self.n_old_charging_plugs_per_stop = 2  # Number of old charging plugs per stop
         self.n_old_charging_devices_per_stop = 3 # Number of old charging devices per stop
         self.n_old_non_battery_buses_per_route = 4 # Number of old non-battery buses per route
         self.n_old_elec_buses_per_route = 0  # Number of old electric buses per route
         self.lt_r_global = 2 # lower bound on traffic interval of route r
         self.ut_r_global = 20 # upper bound on traffic interval of route r
-        self.G = self.create_graph()  # Create the graph with nodes and edges
+        self.G, self.coords = self.create_random_graph(n_depots=n_depots, n_stops=n_stops)  # Create the graph with nodes and edges
         self.R = self.create_R_set()  # Create the set of routes
         self.D = self.create_D_set()  # Create the set of depots
         self.N = self.create_N_set()  # Create the set of feasible charging stops
@@ -41,7 +46,7 @@ class data:
         self.vcc_j = 500  # VARIABLE COST of one charger at stop j
         self.ccps_t = 200000  # CAPITAL COST of a power station at t
         self.cl_tj = 5000  # cost of linking power station spot t and stop j -> cl_tj = 0 if t is old and j has an old charger stop
-        self.cc_uoc_pairs = self.create_cc_uoc_pairs()  # Create the capital and operational costs
+        self.cc_uoc_pairs = cc_ouc_pair_list  # Create the capital and operational costs
         self.csta_j = 100000  # capital cost of a recharging station at stop j (considered constant for all j)
         self.B_r = self.create_B_r()  # Create the mapping of routes to electric bus types
         self.V_r = self.create_V_r()  # Create the mapping of routes to non-battery vehicle types
@@ -179,8 +184,8 @@ class data:
         Returns:
             list: List of route names in format ["r1", "r2", ..., "rN"]
         """
-        n_routes=26
-        R = [f"r{i + 1}" for i in range(n_routes)]
+
+        R = [f"r{i + 1}" for i in range(self.n_routes)]
         return R
 
     def create_D_set(self):
@@ -345,21 +350,25 @@ class data:
 
     def create_ct_rjbc(self):
         """
-        Create a dictionary mapping routes to stops and their respective charging points.
+        Create a dictionary mapping charging Time of b-type electric bus at c-type charging point of stop j on route r.
         
         Returns:
             dict: Dictionary mapping routes to stops and their charging points
         """
+
+        base_charging_time = [15, 20, 25, 30, 35, 10, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+
+
         ct_rjbc = {}
         for r in self.R:
             ct_rjbc[r] = {}
             for stop in self.N:
-                ct_rjbc[r][stop] = {}
                 if self.G.nodes[stop].get("type") == "stop":
+                    ct_rjbc[r][stop] = {}
                     for bus in self.B:
                         ct_rjbc[r][stop][bus] = {}
                         for c in self.C:
-                            ct_rjbc[r][stop][bus][c] = 20
+                            ct_rjbc[r][stop][bus][c] = self.rng.choice(base_charging_time)
         return ct_rjbc # charging Time of b-type electric bus at c-type charging point of stop j on route r
 
     
@@ -370,12 +379,11 @@ class data:
         Returns:
             dict: Dictionary mapping bus types to their capital costs
         """
-        base_costs = [400000, 500000, 350000]  # Base costs for electric buses
+        base_costs = [400000, 500000, 350000, 300000, 450000]  # Base costs for electric buses
         cbus_b = {}
         for i, bus in enumerate(self.B):
             # Use modulo to cycle through base_costs
-            cost_index = i % len(base_costs)
-            cbus_b[bus] = base_costs[cost_index]
+            cbus_b[bus] = self.rng.choice(base_costs)
         return cbus_b # b_bus_types-type electric bus capital cost (initial investment for buying bus)
     
     def create_vcb_rb(self):
@@ -385,28 +393,14 @@ class data:
         Returns:
             dict: Dictionary mapping routes to bus types and their variable costs
         """
-        base_costs = [270000, 200000, 280000]  # Base variable costs for electric buses
+        base_costs = [270000, 200000, 280000, 300000, 250000]
         vcb_rb = {}
         for r in self.R:
             vcb_rb[r] = {}
             for i, bus in enumerate(self.B):
                 # Use modulo to cycle through base_costs
-                cost_index = i % len(base_costs)
-                vcb_rb[r][bus] = base_costs[cost_index]
+                vcb_rb[r][bus] = self.rng.choice(base_costs)
         return vcb_rb # Variable costs of b_bus_types-type electric bus on route r
-
-    # COST INPUTS (considered constant for all c types (one at the moment) and all j stops)
-    def create_cc_uoc_pairs(self):
-        """
-        Create a list of tuples representing the capital and operational.
-        
-        Returns:
-            list: List of tuples (capital cost, operational cost)
-        """
-        cc_uoc_pairs = [
-            (4e7, 2e8)
-        ]
-        return cc_uoc_pairs
 
     def create_B_r(self):
         """
@@ -415,9 +409,12 @@ class data:
         Returns:
             dict: Dictionary mapping each route to a list of electric bus types
         """
+
+        base_values = [r for r in range(1, len(self.B)+1)]
+
         B_r = {}
         for r in self.R:
-            B_r[r] = self.B  # Assuming all routes have the same set of electric bus types
+            B_r[r] = self.rng.sample(self.B, self.rng.choice(base_values))  # Assuming all routes have the same set of electric bus types
         return B_r
 
     def create_V_r(self):
@@ -951,3 +948,152 @@ class data:
                 ub_rb[r][b] = math.ceil(numerator / denominator)
         
         return ub_rb  # upper bound on the number of new b-type electric buses on route r
+
+    def create_random_graph(self, n_depots=2, n_stops=23):
+        """
+        Create a random graph with specified number of depots and stops.
+        Automatically creates connections between nodes based on proximity.
+        
+        Args:
+            n_depots (int): Number of depot nodes
+            n_stops (int): Number of stop nodes
+            seed (int): Random seed for reproducibility
+            
+        Returns:
+            nx.Graph: Generated graph with nodes and edges
+        """
+        import networkx as nx
+        import random
+        import numpy as np
+
+        random.seed(self.seed)
+        np.random.seed(self.seed)
+        
+        G = nx.Graph()
+        
+        # Generate random coordinates for nodes in a 100x100 grid
+        coords = {}
+        
+        # Place depots somewhat centrally
+        depot_radius = 30
+        for i in range(n_depots):
+            angle = 2 * np.pi * i / n_depots
+            x = 50 + depot_radius * np.cos(angle)
+            y = 50 + depot_radius * np.sin(angle)
+            depot_name = f"Depot{i+1}"
+            coords[depot_name] = (x, y)
+            G.add_node(depot_name, 
+                       type="depot", 
+                       charging_possible=True, 
+                       pos=(x, y))
+        
+        # Place stops in a wider area
+        for i in range(n_stops):
+            while True:
+                x = random.uniform(0, 100)
+                y = random.uniform(0, 100)
+                # Check minimum distance from other nodes
+                too_close = False
+                for existing_coord in coords.values():
+                    if np.sqrt((x - existing_coord[0])**2 + (y - existing_coord[1])**2) < 10:
+                        too_close = True
+                        break
+                if not too_close:
+                    break
+                
+            stop_name = f"Stop{i+1}"
+            coords[stop_name] = (x, y)
+            G.add_node(stop_name, 
+                       type="stop", 
+                       charging_possible=random.random() > 0.2,  # 80% chance of charging
+                       pos=(x, y))
+        
+        # Connect depots to nearby stops
+        for depot in [n for n in G.nodes() if G.nodes[n]['type'] == 'depot']:
+            # Connect to closest 3-5 stops
+            stops = [n for n in G.nodes() if G.nodes[n]['type'] == 'stop']
+            distances = [(stop, np.sqrt((coords[depot][0] - coords[stop][0])**2 + 
+                                      (coords[depot][1] - coords[stop][1])**2))
+                        for stop in stops]
+            distances.sort(key=lambda x: x[1])
+            
+            n_connections = random.randint(3, 5)
+            for stop, dist in distances[:n_connections]:
+                G.add_edge(depot, stop, distance=int(dist/2))
+        
+        # Connect stops to their nearest neighbors
+        stops = [n for n in G.nodes() if G.nodes[n]['type'] == 'stop']
+        for stop in stops:
+            # Calculate distances to other stops
+            other_stops = [s for s in stops if s != stop]
+            distances = [(other, np.sqrt((coords[stop][0] - coords[other][0])**2 + 
+                                       (coords[stop][1] - coords[other][1])**2))
+                        for other in other_stops]
+            distances.sort(key=lambda x: x[1])
+            
+            # Connect to 2-4 nearest neighbors
+            n_connections = random.randint(2, 4)
+            for other, dist in distances[:n_connections]:
+                if not G.has_edge(stop, other):
+                    G.add_edge(stop, other, distance=int(dist/2))
+        
+        # Ensure graph is connected
+        if not nx.is_connected(G):
+            components = list(nx.connected_components(G))
+            for i in range(len(components)-1):
+                # Connect closest nodes between components
+                comp1, comp2 = components[i], components[i+1]
+                min_dist = float('inf')
+                best_edge = None
+                
+                for n1 in comp1:
+                    for n2 in comp2:
+                        dist = np.sqrt((coords[n1][0] - coords[n2][0])**2 + 
+                                       (coords[n1][1] - coords[n2][1])**2)
+                        if dist < min_dist:
+                            min_dist = dist
+                            best_edge = (n1, n2)
+                
+                if best_edge:
+                    G.add_edge(best_edge[0], best_edge[1], distance=int(min_dist/2))
+        
+        return G, coords
+
+    # Example usage:
+    def visualize_graph(self, G, coords):
+        """
+        Visualize the generated graph.
+        """
+        import matplotlib.pyplot as plt
+        
+        plt.figure(figsize=(12, 12))
+        
+        # Draw nodes
+        for node in G.nodes():
+            x, y = coords[node]
+            color = 'red' if G.nodes[node]['type'] == 'depot' else 'blue'
+            marker = 's' if G.nodes[node]['type'] == 'depot' else 'o'
+            plt.plot(x, y, marker, color=color, markersize=10, 
+                    label=G.nodes[node]['type'] if node == list(G.nodes())[0] else "")
+            plt.annotate(node, (x, y), xytext=(5, 5), textcoords='offset points')
+        
+        # Draw edges
+        for edge in G.edges():
+            x1, y1 = coords[edge[0]]
+            x2, y2 = coords[edge[1]]
+            plt.plot([x1, x2], [y1, y2], 'gray', alpha=0.5)
+            # Add distance label
+            mid_x = (x1 + x2) / 2
+            mid_y = (y1 + y2) / 2
+            plt.annotate(f"{G.edges[edge]['distance']}", 
+                        (mid_x, mid_y), 
+                        xytext=(0, 3), 
+                        textcoords='offset points',
+                        ha='center')
+        
+        plt.title("Generated Transport Network")
+        plt.legend()
+        plt.grid(True)
+        plt.axis('equal')
+        plt.show()
+
