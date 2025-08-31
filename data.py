@@ -15,12 +15,13 @@ class data:
         self.n_types_chargers = n_types_chargers
         self.n_types_elec_buses = n_types_elec_buses
         self.n_types_non_battery_buses = n_types_non_battery_buses
+        self.n_types_old_elec_buses = 2
         self.n_routes = n_routes
         self.seed = seed
-        self.n_old_charging_plugs_per_stop = 2  # Number of old charging plugs per stop
-        self.n_old_charging_devices_per_stop = 3 # Number of old charging devices per stop
-        self.n_old_non_battery_buses_per_route = 4 # Number of old non-battery buses per route
-        self.n_old_elec_buses_per_route = 0  # Number of old electric buses per route
+        self.n_old_charging_plugs_per_stop = 2  # Maximum Number of old charging plugs per stop
+        self.n_old_charging_devices_per_stop = 3 # Maximum  Number of old charging devices per stop
+        self.n_old_non_battery_buses_per_route = 4 # Maximum Number of old non-battery buses per route
+        self.n_old_elec_buses_per_route = 0  # Maximum Number of old electric buses per route
         self.lt_r_global = 2 # lower bound on traffic interval of route r
         self.ut_r_global = 20 # upper bound on traffic interval of route r
         self.G, self.coords = self.create_random_graph(n_depots=n_depots, n_stops=n_stops)  # Create the graph with nodes and edges
@@ -49,6 +50,7 @@ class data:
         self.cc_uoc_pairs = cc_ouc_pair_list  # Create the capital and operational costs
         self.csta_j = 100000  # capital cost of a recharging station at stop j (considered constant for all j)
         self.B_r = self.create_B_r()  # Create the mapping of routes to electric bus types
+        self.BO_r = self.create_BO_r()  # Create the mapping of routes to old electric bus types
         self.V_r = self.create_V_r()  # Create the mapping of routes to non-battery vehicle types
         self.C_b = self.create_C_b()  # Create the mapping of bus types to charging types
         self.B_rc = self.create_B_rc()  # Create the mapping of routes to bus types and charging types
@@ -275,7 +277,12 @@ class data:
         Returns:
             list: List of old electric bus type names in format ["E401"]
         """
-        BO = ["E401"]  # old electric bus types set
+
+        BO = []
+        tmp = copy.deepcopy(self.B)
+        for i in range(1, self.n_types_old_elec_buses + 1):
+            BO.append(self.rng.choice(tmp))  # old electric bus types set
+            tmp.remove(BO[-1])
         return BO
 
     def create_C_set(self, n_types_chargers):
@@ -416,6 +423,21 @@ class data:
         for r in self.R:
             B_r[r] = self.rng.sample(self.B, self.rng.choice(base_values))  # Assuming all routes have the same set of electric bus types
         return B_r
+    
+    def create_BO_r(self):
+        """
+        Create a dictionary mapping routes to sets of old electric bus types.
+        
+        Returns:
+            dict: Dictionary mapping each route to a list of old electric bus types
+        """
+
+        base_values = [r for r in range(1, len(self.BO)+1)]
+
+        BO_r = {}
+        for r in self.R:
+            BO_r[r] = self.rng.sample(self.BO, self.rng.choice(base_values))
+        return BO_r
 
     def create_V_r(self):
         """
@@ -424,9 +446,11 @@ class data:
         Returns:
             dict: Dictionary mapping each route to a list of non-battery vehicle types
         """
+        base_values = [r for r in range(1, len(self.V)+1)]
+
         V_r = {}
         for r in self.R:
-            V_r[r] = self.V  # Assuming all routes have the same set of non-battery vehicle types
+            V_r[r] = self.rng.sample(self.V, self.rng.choice(base_values)) 
         return V_r
 
     def create_C_b(self):
@@ -436,9 +460,11 @@ class data:
         Returns:
             dict: Dictionary mapping each electric bus type to a list of feasible charging types
         """
+        base_values = [r for r in range(1, len(self.C)+1)]
+
         C_b = {}
         for bus in self.B:
-            C_b[bus] = self.C # Assuming all electric bus types have the same set of feasible charging types
+            C_b[bus] = self.rng.sample(self.C, self.rng.choice(base_values))
         return C_b  # feasible charging type set for b-type electric buses
     
     def create_B_rc(self):
@@ -451,8 +477,11 @@ class data:
         B_rc = {}
         for r in self.R:
             B_rc[r] = {}
-            for c in self.C:
-                B_rc[r][c] = self.B  # Assuming all routes have the same set of electric bus types for each charging type
+            for b in self.B_r[r]:
+                for c in self.C_b[b]:
+                    if c not in B_rc[r]:
+                        B_rc[r][c] = []
+                    B_rc[r][c].append(b)
         return B_rc  # type set of c-type charging electric buses of route r
 
     def create_BO_rc(self):
@@ -465,8 +494,11 @@ class data:
         BO_rc = {}
         for r in self.R:
             BO_rc[r] = {}
-            for c in self.C:
-                BO_rc[r][c] = self.BO  # Assuming all routes have the same set of old electric bus types for each charging type
+            for b in self.BO_r[r]:
+                for c in self.C_b[b]:
+                    if c not in BO_rc[r]:
+                        BO_rc[r][c] = []
+                    BO_rc[r][c].append(b)
         return BO_rc  # type set of c-type charging old electric buses of route r
 
     def create_co_b(self):
@@ -478,7 +510,7 @@ class data:
         """
         co_b = {}
         for bus in self.B:
-            co_b[bus] = [self.C[0]]  # Assuming each bus type supports the same single charging type
+            co_b[bus] = [self.C_b[bus][0]] # We take the first charging type of each bus as the required old charging type
         return co_b  # required charging type for bus type b
 
     def create_nod_jc(self):
@@ -486,6 +518,7 @@ class data:
         Returns:
             dict: Dictionary mapping number of Old c-type plug devices to stop j.
         """ 
+        base_values = [r for r in range(1, self.n_old_charging_plugs_per_stop + 1)]
 
         nod_jc = {
             (j, c): 0
@@ -495,7 +528,7 @@ class data:
 
         for node in self.G.nodes:
             if self.G.nodes[node].get("charging_possible", False):
-                nod_jc[node, "c1"] = self.n_old_charging_plugs_per_stop
+                nod_jc[node, "c1"] = self.rng.sample(self.C, self.rng.choice(base_values))
 
         return nod_jc  # number of old c-type plugs devices at stop j
 

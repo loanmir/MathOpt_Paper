@@ -8,7 +8,8 @@ data_obj = data(
     n_types_elec_buses=5,
     n_types_non_battery_buses=2,
     up_j_value=10,
-    uc_c_value=20
+    uc_c_value=20,
+    seed=43
 )
 
 instance1 = OptimizationInstance(data_obj)
