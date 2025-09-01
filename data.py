@@ -897,34 +897,8 @@ class data:
         Returns:
             dict: Dictionary mapping each route to its depot
         """
-        d_r = {
-            "r1": "Depot1",
-            "r2": "Depot1",
-            "r3": "Depot1",
-            "r4": "Depot1",
-            "r5": "Depot1",
-            "r6": "Depot1",
-            "r7": "Depot1",
-            "r8": "Depot1",
-            "r9": "Depot1",
-            "r10": "Depot1",
-            "r11": "Depot1",
-            "r12": "Depot1",
-            "r13": "Depot1",
-            "r14": "Depot1",
-            "r15": "Depot2",
-            "r16": "Depot2",
-            "r17": "Depot2",
-            "r18": "Depot2",
-            "r19": "Depot2",
-            "r20": "Depot2",
-            "r21": "Depot2",
-            "r22": "Depot2",
-            "r23": "Depot2",
-            "r24": "Depot2",
-            "r25": "Depot2",
-            "r26": "Depot2"
-        }
+        d_r = self.route_depots
+
         return d_r  # depot of route r
     
     def create_L_r(self):
