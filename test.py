@@ -9,6 +9,7 @@ data_obj = data(
     n_types_non_battery_buses=2,
     upper_limit_charging_points=10,
     upper_limit_charging_plugs=20,
+    n_routes=31,
     seed=43
 )
 

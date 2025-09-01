@@ -753,70 +753,90 @@ class data:
 
     def create_pi_r(self):
         """
-        Create random routes that cover the graph efficiently.
+        Create random circular routes starting from stops near depots.
         Returns:
             dict: Dictionary mapping route IDs to lists of stop sequences
         """
         pi_r = {}
+        route_depots = {}  # Track which depot each route belongs to
         
-        def find_path_to_depot(G, current, depot):
-            """Find shortest path back to depot"""
-            try:
-                path = nx.shortest_path(G, current, depot, weight='distance')
-                return path[1:]  # Exclude current node
-            except nx.NetworkXNoPath:
-                return None
+        def get_stops_near_depot(depot, max_distance=15):
+            """Get stops that are within max_distance of a depot"""
+            nearby_stops = []
+            for node in self.G.nodes():
+                if (self.G.nodes[node]['type'] == 'stop' and 
+                    nx.has_path(self.G, depot, node)):
+                    try:
+                        dist = nx.shortest_path_length(self.G, depot, node, weight='distance')
+                        if dist <= max_distance:
+                            nearby_stops.append((node, dist))
+                    except nx.NetworkXNoPath:
+                        continue
+            return sorted(nearby_stops, key=lambda x: x[1])  # Sort by distance
+        
+        def get_valid_neighbors(current_stop, visited):
+            """Get unvisited neighboring stops"""
+            neighbors = []
+            for neighbor in self.G.neighbors(current_stop):
+                if (self.G.nodes[neighbor]['type'] == 'stop' and 
+                    neighbor not in visited):
+                    dist = self.G.edges[current_stop, neighbor]['distance']
+                    neighbors.append((neighbor, dist))
+            return sorted(neighbors, key=lambda x: x[1])
         
         def generate_route(depot):
-            """Generate a single route starting and ending at given depot"""
-            route = [depot]
-            visited_stops = set()
-            current = depot
+            """Generate a single circular route starting from a stop near the depot"""
+            # Get stops near this depot
+            nearby_stops = get_stops_near_depot(depot)
+            if not nearby_stops:
+                return None
             
-            # Forward journey - add 2-5 stops
-            stops_needed = self.rng.randint(2, 5)
-            while len(visited_stops) < stops_needed:
-                # Get available neighbors
-                neighbors = []
-                for n in self.G.neighbors(current):
-                    if (self.G.nodes[n]['type'] == 'stop' and 
-                        n not in visited_stops and
-                        nx.has_path(self.G, n, depot)):  # Ensure we can get back
-                        dist = self.G.edges[current, n]['distance']
-                        neighbors.append((n, dist))
-                
+            # Pick one of the closest stops as starting point
+            if self.rng.random() < 0.7:  # 70% chance to pick from closest 3
+                start_stop = self.rng.choice(nearby_stops[:3])[0]
+            else:  # 30% chance to pick any nearby stop
+                start_stop = self.rng.choice(nearby_stops)[0]
+            
+            # Randomly decide route length
+            route_type = self.rng.random()
+            if route_type < 0.3:    # 30% short routes (2-3 stops)
+                n_stops = self.rng.randint(2, 3)
+            elif route_type < 0.7:  # 40% medium routes (4-6 stops)
+                n_stops = self.rng.randint(4, 6)
+            else:                   # 30% long routes (7-9 stops)
+                n_stops = self.rng.randint(7, 9)
+            
+            route = [start_stop]
+            visited = {start_stop}
+            current = start_stop
+            
+            # Add intermediate stops
+            for _ in range(n_stops - 1):
+                neighbors = get_valid_neighbors(current, visited)
                 if not neighbors:
                     break
                     
-                # Select next stop (prefer closer ones)
-                neighbors.sort(key=lambda x: x[1])
-                if self.rng.random() < 0.7:  # 70% chance to pick closest
-                    next_stop = neighbors[0][0]
+                # 70% chance to pick closest neighbor, 30% random
+                if self.rng.random() < 0.7 and neighbors:
+                    next_stop = neighbors[0][0]  # Closest stop
                 else:
-                    next_stop = self.rng.choice(neighbors)[0]
-                
+                    next_stop = self.rng.choice(neighbors)[0]  # Random stop
+                    
                 route.append(next_stop)
-                visited_stops.add(next_stop)
+                visited.add(next_stop)
                 current = next_stop
             
-            # Return journey
-            if current != depot:
-                return_path = find_path_to_depot(self.G, current, depot)
-                if return_path:
-                    route.extend(return_path)
-                else:
-                    # If no direct path, backtrack through visited stops
-                    while current != depot and len(route) > 1:
-                        route.append(route[-2])
-                        current = route[-1]
+            # Add return journey through same stops
+            if len(route) > 2:
+                return_path = route[-2::-1]  # Exclude last stop and reverse
+                route.extend(return_path)
             
-            # Ensure route ends at depot
-            if route[-1] != depot:
-                route.append(depot)
+            # Complete the circle
+            # route.append(start_stop)
             
-            return route if len(route) >= 4 else None  # Minimum 2 stops between depots
+            return route if len(route) >= 3 else None
         
-        # Generate routes for each depot
+        # Distribute routes among depots
         depots = [n for n in self.G.nodes() if self.G.nodes[n]['type'] == 'depot']
         routes_per_depot = self.n_routes // len(depots)
         extra_routes = self.n_routes % len(depots)
@@ -826,27 +846,48 @@ class data:
             n_routes = routes_per_depot + (1 if extra_routes > 0 else 0)
             extra_routes = max(0, extra_routes - 1)
             
-            attempts = 0
-            while len([r for r in pi_r.values() if r[0] == depot]) < n_routes:
+            depot_attempts = 0
+            while len([r for r in route_depots.values() if r == depot]) < n_routes:
                 route = generate_route(depot)
-                if route and len(route) >= 4:  # Valid route
-                    pi_r[f"r{route_id}"] = route
+                if route and len(route) >= 3:  # Valid route
+                    route_name = f"r{route_id}"
+                    pi_r[route_name] = route
+                    route_depots[route_name] = depot
                     route_id += 1
-                attempts += 1
-                if attempts > 100:  # Prevent infinite loops
+                
+                depot_attempts += 1
+                if depot_attempts > 50:  # Prevent infinite loops
                     break
         
-        # Validate routes
-        for r, stops in pi_r.items():
-            assert stops[0] == stops[-1], f"Route {r} doesn't return to depot"
-            assert len(stops) >= 4, f"Route {r} too short"
-            assert all(nx.has_path(self.G, stops[i], stops[i+1]) 
-                    for i in range(len(stops)-1)), f"Route {r} has invalid connections"
-        
-        print(f"Generated {len(pi_r)} routes:")
+        # Print generated routes with their depots and statistics
+        print("\nGenerated Routes:")
+        print("================")
         for r, stops in sorted(pi_r.items()):
-            print(f"{r}: {' -> '.join(stops)}")
+            depot = route_depots[r]
+            start_stop = stops[0]
+            depot_dist = nx.shortest_path_length(self.G, depot, start_stop, weight='distance')
+            unique_stops = len(set(stops[:-1]))
+            print(f"{r} (Depot: {depot}, Start: {start_stop}, Depot distance: {depot_dist}, "
+                f"Unique stops: {unique_stops}): {' -> '.join(stops)}")
         
+        # Print statistics
+        print("\nRoute Statistics:")
+        print("================")
+        depot_routes = {}
+        for r, d in route_depots.items():
+            if d not in depot_routes:
+                depot_routes[d] = []
+            depot_routes[d].append(r)
+        
+        for depot, routes in sorted(depot_routes.items()):
+            print(f"\n{depot} Routes ({len(routes)}):")
+            for r in sorted(routes):
+                print(f"  {r}: {' -> '.join(pi_r[r])}")
+        
+        self.route_depots = route_depots  # Store depot assignments for other methods
+        
+        # self.visualize_graph(self.G, self.coords)
+
         return pi_r
         
     def create_d_r(self):
