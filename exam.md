@@ -1,17 +1,9 @@
 
-### THINGS TO NOT AUTOMATE AND LEAVE STANDARD
-- Graph
-- Route
-
-### THINGS TO AUTOMATE
-- Types of chargers (C)
-- Types of bus (B) and (V)
-- up_j
 
 ### IMPORTANT THINGS 
 - create_ct_rjbc always gives the value of 25 in order to not complicate the code
 - considering old plug devices and old charging devices only "c1"
-- T_j considers feasible only the same stops 
+- T_j considers feasible only the same stops  ->>>> SURE IT WORKS LIKE THIS?
 - route22 is the only different one from the papare dataset
 
 - Route 14, 18, 25, 26 changed distances to be consistent with model (all the distances are equal now)

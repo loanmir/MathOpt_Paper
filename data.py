@@ -1,3 +1,4 @@
+from calendar import c
 import networkx as nx
 import data_inizialization as di
 import math
@@ -10,7 +11,7 @@ import copy
 
 
 class data:
-    def __init__(self, cc_ouc_pair_list=[(4e7, 2e8)], n_types_chargers=1, n_types_elec_buses=3, n_types_non_battery_buses=2, n_depots=2, n_stops=25, n_routes=26, up_j_value=5, uc_c_value=15, seed=42):
+    def __init__(self, cc_ouc_pair_list=[(4e7, 2e8)], n_types_chargers=1, n_types_elec_buses=3, n_types_non_battery_buses=2, n_depots=2, n_stops=25, n_routes=26, upper_limit_charging_points=5, upper_limit_charging_plugs=15, seed=42):
         self.rng = random.Random(seed)
         self.n_types_chargers = n_types_chargers
         self.n_types_elec_buses = n_types_elec_buses
@@ -21,9 +22,9 @@ class data:
         self.n_old_charging_plugs_per_stop = 2  # Maximum Number of old charging plugs per stop
         self.n_old_charging_devices_per_stop = 3 # Maximum  Number of old charging devices per stop
         self.n_old_non_battery_buses_per_route = 4 # Maximum Number of old non-battery buses per route
-        self.n_old_elec_buses_per_route = 0  # Maximum Number of old electric buses per route
-        self.lt_r_global = 2 # lower bound on traffic interval of route r
-        self.ut_r_global = 20 # upper bound on traffic interval of route r
+        self.n_old_elec_buses_per_route = 2  # Maximum Number of old electric buses per route
+        # self.lt_r_global = 2 # lower bound on traffic interval of route r
+        # self.ut_r_global = 20 # upper bound on traffic interval of route r
         self.G, self.coords = self.create_random_graph(n_depots=n_depots, n_stops=n_stops)  # Create the graph with nodes and edges
         self.R = self.create_R_set()  # Create the set of routes
         self.D = self.create_D_set()  # Create the set of depots
@@ -58,14 +59,16 @@ class data:
         self.co_b = self.create_co_b()  # Create mapping between bus types and their required charging types
         self.nod_jc = self.create_nod_jc()  # Create the number of old c-type plugs devices at stop j
         self.nop_jc = self.create_nop_jc()  # Create the number of old c-type charging points at stop j
-        self.up_j = self.create_up_j(up_j_value)  # Define the upper limit for the number of charging points at stop j
-        self.uc_c = self.create_uc_c(uc_c_value)  # Define the upper limit for the number of charging points of c-type
+        self.up_j = self.create_up_j(upper_limit_charging_points)  # Define the upper limit for the number of charging points at stop j
+        self.uc_c = self.create_uc_c(upper_limit_charging_plugs)  # Define the upper limit for the number of plug devices of c-type
         self.p_c = 260  # price of one c-type charging point
         self.utp_t = 1300  # output power of a power station at spot t ∈ T
         self.T_j = self.create_T_j()  # Create the mapping of feasible charging stops to their respective power station spots
         self.nv_rb_0 = self.create_nv_rb_0()  # Create the initial number of non-battery vehicles on route r
         self.nob_rb = self.create_nob_rb()  # Create the initial number of old electric buses on route r
         self.nob_rbc = self.create_nob_rbc()  # Create the initial number of old electric buses on route r for each charging type c
+        self.lt_r = self.create_lt_r() # lower bound on traffic interval of route r
+        self.ut_r = self.create_ut_r() # upper bound on traffic interval of route r
 
         self.dem_r = self.create_dem_r()
         self.pi_r = self.create_pi_r()
@@ -527,12 +530,11 @@ class data:
         }  # number of old c-type plugs devices at stop j
 
         for node in self.G.nodes:
-            if self.G.nodes[node].get("charging_possible", False):
-                nod_jc[node, "c1"] = self.rng.sample(self.C, self.rng.choice(base_values))
+            for c in self.C:
+                if self.G.nodes[node].get("charging_possible", False):
+                    nod_jc[node, c] = self.rng.choice(base_values)
 
         return nod_jc  # number of old c-type plugs devices at stop j
-
-# Should we create a method for the construction of everything else? IMPORTANT!!
 
     def create_nop_jc(self):
         """    
@@ -540,17 +542,22 @@ class data:
             dict: Dictionary mapping number of old c-type charging points to stop j.
         """ 
     
+        base_values = [r for r in range(1, self.n_old_charging_devices_per_stop + 1)]
+
         nop_jc = {
             (j, c): 0
             for j in self.N
             for c in self.C
         }
 
-        for node in self.G.nodes:
-            if self.G.nodes[node].get("charging_possible", False):
-                nop_jc[node, "c1"] = self.n_old_charging_devices_per_stop
+        rng = random.Random(self.seed + 1) # different rng to have different coupling
 
-        return nop_jc  # number of old c-type plugs devices at stop j
+        for node in self.G.nodes:
+            for c in self.C:
+                if self.G.nodes[node].get("charging_possible", False):
+                    nop_jc[node, c] = rng.choice(base_values)  # number of old c-type charging devices at stop j
+
+        return nop_jc
 
     def create_up_j(self, up_j_value):
         """
@@ -591,7 +598,8 @@ class data:
             stop: [stop] for stop in self.N 
         }
         return T_j  # set power station spots feasible for stop j
-    
+    # considering every charging point can be linked with only one power station
+
     def create_nv_rb_0(self):
         """
         Create a dictionary mapping routes to non-battery vehicles and their counts.
@@ -599,8 +607,10 @@ class data:
         Returns:
             dict: Dictionary mapping each route to a dictionary of non-battery vehicle types and their counts
         """
+        base_values = [r for r in range(0, self.n_old_non_battery_buses_per_route + 1)]
+        
         nv_rb_0 = {
-            r: {v: self.n_old_non_battery_buses_per_route for v in self.V} for r in self.R
+            r: {v: self.rng.choice(base_values) for v in self.V} for r in self.R
         }
         return nv_rb_0  # number of b-type non-battery vehicles on route r
 
@@ -611,8 +621,13 @@ class data:
         Returns:
             dict: Dictionary mapping each route to a dictionary of old electric bus types and their counts
         """
+        if self.n_old_elec_buses_per_route > 0:
+            base_values = [r for r in range(0, self.n_old_elec_buses_per_route + 1)]
+        else:
+            base_values = [0]
+
         nob_rb = {
-            r: {bo: self.n_old_elec_buses_per_route for bo in self.BO} for r in self.R
+            r: {bo: self.rng.choice(base_values) for bo in self.BO} for r in self.R
         }
         return nob_rb  # number of old b-type electric buses on route r
 
@@ -623,9 +638,28 @@ class data:
         Returns:
             dict: Dictionary mapping each route to a dictionary of old electric bus types and their counts at charging points
         """
-        nob_rbc = {
-            r: {"E433": {"c1": self.n_old_non_battery_buses_per_route}} for r in self.R
-        }
+        #base_values = [r for r in range(1, self.n_old_non_battery_buses_per_route + 1)]
+
+        #nob_rbc = {
+        #    r: {"E401": {"c1": 2}} for r in self.R
+        #       ......    "c2": 2
+        #}
+
+        tmp = copy.deepcopy(self.nob_rb)
+
+        nob_rbc = {}
+
+        for r, bus in tmp.items():
+            nob_rbc[r] = {}
+            for b in bus:
+                nob_rbc[r][b] = {}
+                while tmp[r][b] > 0:
+                    c_type = self.rng.choice(self.C_b[b])
+                    if c_type not in nob_rbc[r][b]:
+                        nob_rbc[r][b][c_type] = 0
+                    nob_rbc[r][b][c_type] += 1
+                    tmp[r][b] -= 1
+
         return nob_rbc  # number of old b-type electric buses on route r and c-type charging point
 
     def create_dem_r(self):
@@ -661,7 +695,9 @@ class data:
         Returns:
             dict: Dictionary mapping each route to its lower traffic interval bound
         """
-        lt_r = {r: self.lt_r_global for r in self.R}
+        base_values = [6, 18, 4, 13, 9, 36, 27, 13, 15, 7, 4, 8]
+        lt_r = {r: self.rng.choice(base_values) for r in self.R}
+
         return lt_r
 
     def create_ut_r(self):
@@ -671,16 +707,19 @@ class data:
         Returns:
             dict: Dictionary mapping each route to its upper traffic interval bound
         """
-        ut_r = {r: self.ut_r_global for r in self.R}
+        ut_r = {r: self.lt_r[r]+2 for r in self.R}
         return ut_r
 
+    '''
     def create_pi_r(self):
+    
         """
         Create a dictionary mapping routes to their respective stop sequences.
         
         Returns:
             dict: Dictionary mapping each route to a list of stops in that route
         """
+
         pi_r = {
             "r1": ["Stop1", "Stop2", "Stop1"],
             "r2": ["Stop1", "Stop2", "Stop3", "Stop2", "Stop1"],
@@ -710,7 +749,106 @@ class data:
             "r26": ["Stop18", "Stop16", "Stop18"],
         }  # route r cycle
         return pi_r  # stop sequence of route r
+    '''
 
+    def create_pi_r(self):
+        """
+        Create random routes that cover the graph efficiently.
+        Returns:
+            dict: Dictionary mapping route IDs to lists of stop sequences
+        """
+        pi_r = {}
+        
+        def find_path_to_depot(G, current, depot):
+            """Find shortest path back to depot"""
+            try:
+                path = nx.shortest_path(G, current, depot, weight='distance')
+                return path[1:]  # Exclude current node
+            except nx.NetworkXNoPath:
+                return None
+        
+        def generate_route(depot):
+            """Generate a single route starting and ending at given depot"""
+            route = [depot]
+            visited_stops = set()
+            current = depot
+            
+            # Forward journey - add 2-5 stops
+            stops_needed = self.rng.randint(2, 5)
+            while len(visited_stops) < stops_needed:
+                # Get available neighbors
+                neighbors = []
+                for n in self.G.neighbors(current):
+                    if (self.G.nodes[n]['type'] == 'stop' and 
+                        n not in visited_stops and
+                        nx.has_path(self.G, n, depot)):  # Ensure we can get back
+                        dist = self.G.edges[current, n]['distance']
+                        neighbors.append((n, dist))
+                
+                if not neighbors:
+                    break
+                    
+                # Select next stop (prefer closer ones)
+                neighbors.sort(key=lambda x: x[1])
+                if self.rng.random() < 0.7:  # 70% chance to pick closest
+                    next_stop = neighbors[0][0]
+                else:
+                    next_stop = self.rng.choice(neighbors)[0]
+                
+                route.append(next_stop)
+                visited_stops.add(next_stop)
+                current = next_stop
+            
+            # Return journey
+            if current != depot:
+                return_path = find_path_to_depot(self.G, current, depot)
+                if return_path:
+                    route.extend(return_path)
+                else:
+                    # If no direct path, backtrack through visited stops
+                    while current != depot and len(route) > 1:
+                        route.append(route[-2])
+                        current = route[-1]
+            
+            # Ensure route ends at depot
+            if route[-1] != depot:
+                route.append(depot)
+            
+            return route if len(route) >= 4 else None  # Minimum 2 stops between depots
+        
+        # Generate routes for each depot
+        depots = [n for n in self.G.nodes() if self.G.nodes[n]['type'] == 'depot']
+        routes_per_depot = self.n_routes // len(depots)
+        extra_routes = self.n_routes % len(depots)
+        
+        route_id = 1
+        for depot in depots:
+            n_routes = routes_per_depot + (1 if extra_routes > 0 else 0)
+            extra_routes = max(0, extra_routes - 1)
+            
+            attempts = 0
+            while len([r for r in pi_r.values() if r[0] == depot]) < n_routes:
+                route = generate_route(depot)
+                if route and len(route) >= 4:  # Valid route
+                    pi_r[f"r{route_id}"] = route
+                    route_id += 1
+                attempts += 1
+                if attempts > 100:  # Prevent infinite loops
+                    break
+        
+        # Validate routes
+        for r, stops in pi_r.items():
+            assert stops[0] == stops[-1], f"Route {r} doesn't return to depot"
+            assert len(stops) >= 4, f"Route {r} too short"
+            assert all(nx.has_path(self.G, stops[i], stops[i+1]) 
+                    for i in range(len(stops)-1)), f"Route {r} has invalid connections"
+        
+        print(f"Generated {len(pi_r)} routes:")
+        for r, stops in sorted(pi_r.items()):
+            print(f"{r}: {' -> '.join(stops)}")
+        
+        return pi_r
+        
     def create_d_r(self):
         """
         Create a dictionary mapping routes to their respective depots.

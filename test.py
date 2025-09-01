@@ -5,10 +5,10 @@ from scalability import run_scalability
 
 data_obj = data(
     n_types_chargers=2,
-    n_types_elec_buses=5,
+    n_types_elec_buses=7,
     n_types_non_battery_buses=2,
-    up_j_value=10,
-    uc_c_value=20,
+    upper_limit_charging_points=10,
+    upper_limit_charging_plugs=20,
     seed=43
 )
 
