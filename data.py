@@ -610,7 +610,7 @@ class data:
         base_values = [r for r in range(0, self.n_old_non_battery_buses_per_route + 1)]
         
         nv_rb_0 = {
-            r: {v: self.rng.choice(base_values) for v in self.V} for r in self.R
+            r: {v: self.rng.choice(base_values) for v in self.V_r[r]} for r in self.R
         }
         return nv_rb_0  # number of b-type non-battery vehicles on route r
 
@@ -627,7 +627,7 @@ class data:
             base_values = [0]
 
         nob_rb = {
-            r: {bo: self.rng.choice(base_values) for bo in self.BO} for r in self.R
+            r: {bo: self.rng.choice(base_values) for bo in self.BO_r[r]} for r in self.R
         }
         return nob_rb  # number of old b-type electric buses on route r
 
@@ -711,42 +711,12 @@ class data:
         return ut_r
 
     '''
-    def create_pi_r(self):
-    
-        """
-        Create a dictionary mapping routes to their respective stop sequences.
-        
-        Returns:
-            dict: Dictionary mapping each route to a list of stops in that route
-        """
-
+        REMINDER OF THE STRUCTURE (OPTIMUS PRIME)
         pi_r = {
             "r1": ["Stop1", "Stop2", "Stop1"],
             "r2": ["Stop1", "Stop2", "Stop3", "Stop2", "Stop1"],
             "r3": ["Stop1", "Stop2", "Stop2", "Stop2", "Stop1"],
             "r4": ["Stop1", "Stop5", "Stop1"],
-            "r5": ["Stop1", "Stop5", "Stop6", "Stop5", "Stop1"],
-            "r6": ["Stop1", "Stop7", "Stop1"],
-            "r7": ["Stop1", "Stop8", "Stop9", "Stop8", "Stop1"],
-            "r8": ["Stop9", "Stop10", "Stop11", "Stop10", "Stop9"],
-            "r9": ["Stop10", "Stop7", "Stop10"],
-            "r10": ["Stop10", "Stop7", "Stop10"],
-            "r11": ["Stop12", "Stop13", "Stop12"],
-            "r12": ["Stop14", "Stop15", "Stop14"],
-            "r13": ["Stop14", "Stop13", "Stop14"],
-            "r14": ["Stop15", "Stop14", "Stop11", "Stop14", "Stop15"],
-            "r15": ["Stop14", "Stop11", "Stop14"],
-            "r16": ["Stop14", "Stop16", "Stop14"],
-            "r17": ["Stop10", "Stop16", "Stop10"],
-            "r18": ["Stop14", "Stop16", "Stop14"],
-            "r19": ["Stop14", "Stop17", "Stop14"],
-            "r20": ["Stop18", "Stop19", "Stop18"],
-            "r21": ["Stop18", "Stop2", "Stop20", "Stop2", "Stop18"],
-            "r22": ["Stop1", "Stop2", "Stop1"],
-            "r23": ["Stop22", "Stop15", "Stop22"],
-            "r24": ["Stop15", "Stop2", "Stop23", "Stop2", "Stop15"],
-            "r25": ["Stop15", "Stop2", "Stop23", "Stop2", "Stop15"],
-            "r26": ["Stop18", "Stop16", "Stop18"],
         }  # route r cycle
         return pi_r  # stop sequence of route r
     '''
@@ -909,9 +879,16 @@ class data:
             dict: Dictionary mapping each route to its cycle time
         """
         # define L_r (should be: ut_r * num_of_old_veichles_operating_on_the_route)
-        L_r = {
-            route : (self.ut_r_global * (self.n_old_elec_buses_per_route + self.n_old_non_battery_buses_per_route)) for route in self.R  # cycle time of route r1
-        }
+        L_r = {}
+
+        for r in self.R:
+            tmp = 0
+            for b in self.BO_r[r]:
+                tmp += self.nob_rb[r][b] 
+            for b in self.V_r[r]:
+                tmp += self.nv_rb_0[r][b]
+            L_r[r] = self.ut_r[r] * tmp 
+
         return L_r  # cycle time of route r
 
     # this need to be [d(D,S1), d(S1,S2), d(S2,S3), ...] where D is the depot and S1, S2, ..., are the stops in the route
@@ -921,7 +898,7 @@ class data:
         
         Returns:
             dict: Dictionary mapping each route to a list of distances for its stops
-        """
+        
         distance_r = {
             "r1": [3, 9, 9],
             "r2": [3, 9, 4, 4, 9],
@@ -951,6 +928,54 @@ class data:
             "r26": [4, 21, 21]
         }
         return distance_r # distance of each stop in route r
+        """
+
+        distance_r = {}
+        
+        for r in self.pi_r:
+            distances = []
+            route_stops = self.pi_r[r]
+            depot = self.route_depots[r]
+            
+            # First distance: from depot to first stop
+            first_dist = self.G.edges[depot, route_stops[0]]['distance']
+            distances.append(first_dist)
+            
+            # Add distances between consecutive stops
+            for i in range(len(route_stops)-1):
+                stop1 = route_stops[i]
+                stop2 = route_stops[i+1]
+                
+                try:
+                    # Get direct distance if stops are connected
+                    dist = self.G.edges[stop1, stop2]['distance']
+                except KeyError:
+                    # If no direct connection, get shortest path distance
+                    try:
+                        path = nx.shortest_path(self.G, stop1, stop2, weight='distance')
+                        dist = sum(self.G.edges[path[i], path[i+1]]['distance'] 
+                                for i in range(len(path)-1))
+                    except nx.NetworkXNoPath:
+                        print(f"Warning: No path found between {stop1} and {stop2} in route {r}")
+                        dist = 0
+                
+                distances.append(dist)
+            
+            distance_r[r] = distances
+        
+        # Print route distances for verification
+        print("\nRoute Distances:")
+        print("===============")
+        for r, distances in sorted(distance_r.items()):
+            depot = self.route_depots[r]
+            stops = self.pi_r[r]
+            print(f"{r} (Depot: {depot}): {distances}")
+            print(f"    Path: {depot} -> {' -> '.join(stops)}")
+            print(f"    Total distance: {sum(distances)}")
+        
+
+        return distance_r
+
 
     def create_S_rbc_s(self):
         """
@@ -974,7 +999,6 @@ class data:
                     )
                     for idx, s in enumerate(scenarios, 1):
                         S_rbc_s[(r, b, c, idx)] = list(s)
-
 
         return S_rbc_s
 
@@ -1031,7 +1055,7 @@ class data:
             dict: Dictionary mapping (route, bus type, charging type) to the number of scenarios
         """
         # Define R_jc
-        R_jc = di.compute_all_R_jc(self.create_S_rbc_s())
+        R_jc = di.compute_all_R_jc(self.S_rbc_s)
         return R_jc
 
     def create_nc_jrc_max(self):
