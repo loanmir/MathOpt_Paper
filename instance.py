@@ -21,8 +21,8 @@ class OptimizationInstance:
         #self.n_old_charging_devices_per_stop = self.data.n_old_charging_devices_per_stop # = 2
         #self.n_old_non_battery_buses_per_route = self.data.n_old_non_battery_buses_per_route # = 1
         #self.n_old_elec_buses_per_route = self.data.n_old_elec_buses_per_route # = 1
-        self.lt_r_global = self.data.lt_r_global
-        self.ut_r_global = self.data.ut_r_global
+        self.lt_r = self.data.lt_r
+        self.ut_r = self.data.ut_r
         self.G = self.data.G
         self.R = self.data.R
         self.D = self.data.D
@@ -416,7 +416,7 @@ class OptimizationInstance:
         # Constraint (28)
         # ut_r[r]
         for r in self.R:
-            self.model.addConstr(self.L_r[r] * self.y_r[r] <= self.ut_r_global * (
+            self.model.addConstr(self.L_r[r] * self.y_r[r] <= self.ut_r[r] * (
                         gb.quicksum(
                             gb.quicksum(self.nb_rbc[r, b, c] + self.nob_rb.get(r, {}).get(b, 0)
                                 for c in self.C_b[b])
@@ -428,7 +428,7 @@ class OptimizationInstance:
         # Constraint (29)
         # lt_r[r]
         for r in self.R:
-            self.model.addConstr(self.L_r[r] * self.y_r[r] >= self.lt_r_global * (
+            self.model.addConstr(self.L_r[r] * self.y_r[r] >= self.lt_r[r] * (
                 gb.quicksum(gb.quicksum(self.nb_rbc[r, b, c] + self.nob_rb.get(r, {}).get(b, 0)
                 for c in self.C_b[b]) for b in self.B_r[r]) + gb.quicksum(self.nv_rb[r, b] for b in self.V_r[r])),
                 name=f"Constraint_29_{r}"
@@ -446,7 +446,7 @@ class OptimizationInstance:
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
                 self.model.addConstr(
-                    self.nc_jc[j, c] == gb.quicksum(self.nc_jrc[j, r, c] - self.nod_jc[j, c] for r in self.R_jc.get((j, c), [])),
+                    self.nc_jc[j, c] == gb.quicksum(self.nc_jrc[j, r, c] - self.nod_jc[j, c] for r in self.R_jc.get((j, c), []) if (j, r, c) in self.nc_jrc),
                     name=f"Constraint_31_{j}_{c}"
                 )
 
@@ -454,67 +454,74 @@ class OptimizationInstance:
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
                 for r in self.R_jc.get((j, c), []):
-                    self.model.addConstr(self.nc_jrc_b[j, r, c] ==
-                        gb.quicksum(self.nb_rbc[r, b, c] + self.nob_rbc.get(r, {}).get(b, {}).get(c, 0)
-                        for b in self.B_rc[r][c]),
-                        name=f"Constraint_32_{j}_{r}_{c}"
+                    if (j, r, c) in self.nc_jrc:
+                        self.model.addConstr(self.nc_jrc_b[j, r, c] ==
+                            gb.quicksum(self.nb_rbc[r, b, c] + self.nob_rbc.get(r, {}).get(b, {}).get(c, 0)
+                            for b in self.B_rc[r][c]),
+                            name=f"Constraint_32_{j}_{r}_{c}"
                     )
 
         # Constraint (33)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
                 for r in self.R_jc.get((j, c), []):
-                    self.model.addConstr(
-                        self.nc_jrc[j, r, c] <= self.nc_jrc_ct[j, r, c],
-                        name=f"Constraint_33_{j}_{r}_{c}"
+                    if (j, r, c) in self.nc_jrc:
+                        self.model.addConstr(
+                            self.nc_jrc[j, r, c] <= self.nc_jrc_ct[j, r, c],
+                            name=f"Constraint_33_{j}_{r}_{c}"
                     )
 
         # Constraint (34)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
                 for r in self.R_jc.get((j, c), []):
-                    self.model.addConstr(
-                        self.nc_jrc[j, r, c] <= self.nc_jrc_b[j, r, c],
-                        name=f"Constraint_34_{j}_{r}_{c}"
+                    if (j, r, c) in self.nc_jrc:
+                        self.model.addConstr(
+                            self.nc_jrc[j, r, c] <= self.nc_jrc_b[j, r, c],
+                            name=f"Constraint_34_{j}_{r}_{c}"
                     )
 
         # Constraint (35)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
                 for r in self.R_jc.get((j, c), []):
-                    self.model.addConstr(
-                        self.nc_jrc[j, r, c] >= self.nc_jrc_ct[j, r, c] - self.up_j[j] * self.uc_c[c] * (1 - self.eta_jrc_1[j, r, c]),
-                        name=f"Constraint_35_{j}_{r}_{c}"
+                    if (j, r, c) in self.nc_jrc:
+                        self.model.addConstr(
+                            self.nc_jrc[j, r, c] >= self.nc_jrc_ct[j, r, c] - self.up_j[j] * self.uc_c[c] * (1 - self.eta_jrc_1[j, r, c]),
+                            name=f"Constraint_35_{j}_{r}_{c}"
                     )
 
         # Constraint (36)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
                 for r in self.R_jc.get((j, c), []):
-                    self.model.addConstr(
-                        self.nc_jrc[j, r, c] >= self.nc_jrc_b[j, r, c] -
-                        self.up_j[j] * self.uc_c[c] * (1 - self.eta_jrc_2[j, r, c]),
-                        name=f"Constraint_36_{j}_{r}_{c}"
+                    if (j, r, c) in self.nc_jrc:
+                        self.model.addConstr(
+                            self.nc_jrc[j, r, c] >= self.nc_jrc_b[j, r, c] -
+                            self.up_j[j] * self.uc_c[c] * (1 - self.eta_jrc_2[j, r, c]),
+                            name=f"Constraint_36_{j}_{r}_{c}"
                     )
 
         # Constraint (37)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
                 for r in self.R_jc.get((j, c), []):
-                    self.model.addConstr(
-                        self.eta_jrc_1[j, r, c] + self.eta_jrc_2[j, r, c] == 1,
-                        name=f"Constraint_37_{j}_{r}_{c}"
-                    )
+                    if (j, r, c) in self.nc_jrc:
+                        self.model.addConstr(
+                            self.eta_jrc_1[j, r, c] + self.eta_jrc_2[j, r, c] == 1,
+                            name=f"Constraint_37_{j}_{r}_{c}"
+                        )
 
         # Constraint (38)
         # lt_r[r]
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
                 for r in self.R_jc.get((j, c), []):
-                    for b in self.B_rc[r][c]:
-                        self.model.addConstr(
-                            self.nc_jrc_ct[j, r, c] >= (self.ct_rjbc[r][j][b][c] * self.y_jrbc[j, r, b, c]) / self.lt_r_global,
-                            name=f"Constraint_38_{j}_{r}_{c}_{b}"
+                    if (j, r, c) in self.nc_jrc:
+                        for b in self.B_rc[r][c]:
+                            self.model.addConstr(
+                                self.nc_jrc_ct[j, r, c] >= (self.ct_rjbc[r][j][b][c] * self.y_jrbc[j, r, b, c]) / self.lt_r[r],
+                                name=f"Constraint_38_{j}_{r}_{c}_{b}"
                         )
 
         # Constraint (39)
@@ -522,42 +529,46 @@ class OptimizationInstance:
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
                 for r in self.R_jc.get((j, c), []):
-                    for b in self.B_rc[r][c]:
-                        self.model.addConstr(
-                            self.nc_jrc_ct[j, r, c] <= (
-                                (self.ct_rjbc[r][j][b][c] * self.y_jrbc[j, r, b, c]) / self.lt_r_global +
-                                self.nc_jrc_max[j][r][c] * (1 - self.xi_jrcb.get((j, r, b, c), 0))),
-                                name=f"Constraint_39_{j}_{r}_{c}_{b}"
+                    if (j, r, c) in self.nc_jrc:
+                        for b in self.B_rc[r][c]:
+                            self.model.addConstr(
+                                self.nc_jrc_ct[j, r, c] <= (
+                                    (self.ct_rjbc[r][j][b][c] * self.y_jrbc[j, r, b, c]) / self.lt_r[r] +
+                                    self.nc_jrc_max[j][r][c] * (1 - self.xi_jrcb.get((j, r, b, c), 0))),
+                                    name=f"Constraint_39_{j}_{r}_{c}_{b}"
                         )
 
         # Constraint (40)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
                 for r in self.R_jc.get((j, c), []):
-                    for b in self.B_rc[r][c]:
-                        self.model.addConstr(
-                            self.nc_jrc_ct[j, r, c] >= self.noc_jrc_ct[j][r][c],
-                            name=f"Constraint_40_{j}_{r}_{c}_{b}"
+                    if (j, r, c) in self.nc_jrc:
+                        for b in self.B_rc[r][c]:
+                            self.model.addConstr(
+                                self.nc_jrc_ct[j, r, c] >= self.noc_jrc_ct[j][r][c],
+                                name=f"Constraint_40_{j}_{r}_{c}_{b}"
                         )
 
         # Constraint (41)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
                 for r in self.R_jc.get((j, c), []):
-                    for b in self.B_rc[r][c]:
-                        self.model.addConstr(
-                            self.nc_jrc_ct[j, r, c] <= (
-                            self.noc_jrc_ct[j][r][c] + self.nc_jrc_max[j][r][c] * (1 - self.xi_jrc[j, r, c])),
-                            name=f"Constraint_41_{j}_{r}_{c}_{b}"
+                    if (j, r, c) in self.nc_jrc:
+                        for b in self.B_rc[r][c]:
+                            self.model.addConstr(
+                                self.nc_jrc_ct[j, r, c] <= (
+                                self.noc_jrc_ct[j][r][c] + self.nc_jrc_max[j][r][c] * (1 - self.xi_jrc[j, r, c])),
+                                name=f"Constraint_41_{j}_{r}_{c}_{b}"
                         )
 
         # Constraint (42)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
                 for r in self.R_jc.get((j, c), []):
-                    self.model.addConstr(
-                        self.xi_jrc[j, r, c] + gb.quicksum(self.xi_jrcb[j, r, c, b] for b in self.B_rc[r][c]) == 1,
-                        name=f"Constraint_42_{j}_{c}_{r}"
+                    if (j, r, c) in self.nc_jrc:
+                        self.model.addConstr(
+                            self.xi_jrc[j, r, c] + gb.quicksum(self.xi_jrcb[j, r, c, b] for b in self.B_rc[r][c]) == 1,
+                            name=f"Constraint_42_{j}_{c}_{r}"
                     )
 
         # Constraint (43)
@@ -578,7 +589,7 @@ class OptimizationInstance:
                     for s in range(1, self.n_rbc[r, b, c] + 1):
                         predecessors = self.S_rbc_s[(r, b, c, s)]
                         self.model.addConstr(
-                            gb.quicksum(self.y_jrbc_s[j, r, b, c, s] for j in predecessors) == di.compute_l_rbc_s(self.S_rbc_s)[r, b, c, s] * self.y_rbc_s[r, b, c, s],
+                            gb.quicksum(self.y_jrbc_s[j, r, b, c, s] for j in predecessors if (j, r, b, c, s) in self.y_jrbc_s) == di.compute_l_rbc_s(self.S_rbc_s)[r, b, c, s] * self.y_rbc_s[r, b, c, s],
                             name=f"Constraint_44_{r}_{b}_{c}_{s}"
                         )
 
@@ -637,14 +648,15 @@ class OptimizationInstance:
         for r in self.R:
             for j in self.pi_r[r]:
                 for c in self.C:
-                    self.model.addConstr(
-                        self.nc_jrc_ct[j, r, c] >= 0,
-                        name=f"Constraint_61_a_{j}_{r}_{c}"
-                    )
-                    self.model.addConstr(
-                        self.nc_jrc_ct[j, r, c] <= self.nc_jrc_max[j][r][c],
-                        name=f"Constraint_61_b_{j}_{r}_{c}"
-                    )
+                    if j in self.nc_jrc_max and r in self.nc_jrc_max[j] and c in self.nc_jrc_max[j][r]:
+                        self.model.addConstr(
+                            self.nc_jrc_ct[j, r, c] >= 0,
+                            name=f"Constraint_61_a_{j}_{r}_{c}"
+                        )
+                        self.model.addConstr(
+                            self.nc_jrc_ct[j, r, c] <= self.nc_jrc_max[j][r][c],
+                            name=f"Constraint_61_b_{j}_{r}_{c}"
+                        )
 
         # Constraint (62)
         for r in self.R:
@@ -663,14 +675,15 @@ class OptimizationInstance:
         for r in self.R:
             for j in self.pi_r[r]:
                 for c in self.C:
-                    self.model.addConstr(
-                        self.nc_jrc[j, r, c] >= 0,
-                        name=f"Constraint_63_a_{j}_{r}_{c}"
-                    )
-                    self.model.addConstr(
-                        self.nc_jrc[j, r, c] <= min(self.up_j[j] * self.uc_c[c], self.nc_jrc_max[j][r][c]),
-                        name=f"Constraint_63_b_{j}_{r}_{c}"
-                    )
+                    if j in self.nc_jrc_max and r in self.nc_jrc_max[j] and c in self.nc_jrc_max[j][r]:
+                        self.model.addConstr(
+                            self.nc_jrc[j, r, c] >= 0,
+                            name=f"Constraint_63_a_{j}_{r}_{c}"
+                        )
+                        self.model.addConstr(
+                            self.nc_jrc[j, r, c] <= min(self.up_j[j] * self.uc_c[c], self.nc_jrc_max[j][r][c]),
+                            name=f"Constraint_63_b_{j}_{r}_{c}"
+                        )
 
         # Constraint (65)
         for r in self.R:

@@ -1,4 +1,3 @@
-from calendar import c
 import networkx as nx
 import data_inizialization as di
 import math
@@ -1068,8 +1067,8 @@ class data:
         # Define nc_jrc_max
             # Define nc_jrc_max
         nc_jrc_max = {}
-        R_jc = self.create_R_jc()  # routes, bus types, charging types
-        lt_r = self.create_lt_r()  # lower traffic interval bounds for each route
+        R_jc = self.R_jc  # routes, bus types, charging types
+        lt_r = self.lt_r  # lower traffic interval bounds for each route
 
         for j in self.N:
             if j not in self.D:
@@ -1094,8 +1093,8 @@ class data:
         Returns:
             dict: Dictionary mapping (stop, route, charging type) to the maximum number of plug devices
         """
-        R_jc = self.create_R_jc()
-        lt_r = self.create_lt_r()  # lower traffic interval bounds for each route
+        R_jc = self.R_jc
+        lt_r = self.lt_r # lower traffic interval bounds for each route
 
         # Define noc_jrc_ct
         noc_jrc_ct = {}
