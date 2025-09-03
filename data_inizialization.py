@@ -44,6 +44,7 @@ def compute_nc_jrc_max(route_r, stop_j, charge_type_c, B_rc, ct_rjbc_dict, ltr_r
         except KeyError:
             continue  # skip if any key is missing
     nc_jrc_max = math.ceil(max_ct / ltr_r) if ltr_r > 0 else 0
+    print(f"Computed nc_jrc_max for route {route_r}, stop {stop_j}, charger {charge_type_c}: {nc_jrc_max}, with max_ct = {max_ct}")
     return nc_jrc_max
 
 def compute_noc_jrc_ct(route_r, stop_j, charge_type_c, BO_rc, ct_rjbc_dict, ltr_r):
@@ -66,8 +67,9 @@ def compute_noc_jrc_ct(route_r, stop_j, charge_type_c, BO_rc, ct_rjbc_dict, ltr_
             max_ct = max(max_ct, ct)
         except KeyError:
             continue
-    nc_jrc_max = math.ceil(max_ct / ltr_r) if ltr_r > 0 else 0
-    return nc_jrc_max
+    noc_jrc_ct = max_ct / ltr_r if ltr_r > 0 else 0
+    print(f"Computed noc_jrc_ct for route {route_r}, stop {stop_j}, charger {charge_type_c}: {noc_jrc_ct}, with max_ct = {max_ct}")
+    return noc_jrc_ct
 
 
 def generate_feasible_scenarios(route_id, stops, stop_distances, b_type, c_type, dmax_b):

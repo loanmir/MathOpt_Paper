@@ -38,7 +38,6 @@ class data:
         self.C = self.create_C_set(n_types_chargers)  # Create the set of charging types
         self.cap_b = self.create_cap_b(self.create_capacities())  # Create the capacities for bus types
         self.d_b_MAX = self.create_d_b_MAX()  # Create the maximum driving range for each bus type
-        self.ct_rjbc = self.create_ct_rjbc()  # Create the dictionary mapping routes to stops and their respective charging points
         self.cbus_b = self.create_cbus_b()  # Create the capital costs for electric bus types
         self.vcb_rb = self.create_vcb_rb()  # Create the variable costs for electric buses on routes
         self.ccp_c = 120000  # CAPITAL COST of one c-type charging point
@@ -68,9 +67,10 @@ class data:
         self.nob_rbc = self.create_nob_rbc()  # Create the initial number of old electric buses on route r for each charging type c
         self.lt_r = self.create_lt_r() # lower bound on traffic interval of route r
         self.ut_r = self.create_ut_r() # upper bound on traffic interval of route r
+        self.pi_r = self.create_pi_r()
+        self.ct_rjbc = self.create_ct_rjbc()  # Create the dictionary mapping routes to stops and their respective charging points
 
         self.dem_r = self.create_dem_r()
-        self.pi_r = self.create_pi_r()
         self.d_r = self.create_d_r()
         self.L_r = self.create_L_r()
         self.distance_r = self.create_distance_r()
@@ -358,29 +358,29 @@ class data:
         return d_b_MAX # Maximum driving range for each bus type
 
     def create_ct_rjbc(self):
-        """
-        Create a dictionary mapping charging Time of b-type electric bus at c-type charging point of stop j on route r.
+            """
+            Create a dictionary mapping charging Time of b-type electric bus at c-type charging point of stop j on route r.
+            
+            Returns:
+                dict: Dictionary mapping routes to stops and their charging points
+            """
+
+            base_charging_time = [15, 20, 25, 30, 35, 10, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+
+
+            ct_rjbc = {}
+            for r in self.R:
+                ct_rjbc[r] = {}
+                for stop in self.N:
+                    if self.G.nodes[stop].get("type") == "stop":
+                        ct_rjbc[r][stop] = {}
+                        for bus in self.B:
+                            ct_rjbc[r][stop][bus] = {}
+                            for c in self.C:
+                                ct_rjbc[r][stop][bus][c] = self.rng.choice(base_charging_time)
+            return ct_rjbc # charging Time of b-type electric bus at c-type charging point of stop j on route r
+
         
-        Returns:
-            dict: Dictionary mapping routes to stops and their charging points
-        """
-
-        base_charging_time = [15, 20, 25, 30, 35, 10, 16, 17, 18, 19, 20, 21, 22, 23, 24]
-
-
-        ct_rjbc = {}
-        for r in self.R:
-            ct_rjbc[r] = {}
-            for stop in self.N:
-                if self.G.nodes[stop].get("type") == "stop":
-                    ct_rjbc[r][stop] = {}
-                    for bus in self.B:
-                        ct_rjbc[r][stop][bus] = {}
-                        for c in self.C:
-                            ct_rjbc[r][stop][bus][c] = self.rng.choice(base_charging_time)
-        return ct_rjbc # charging Time of b-type electric bus at c-type charging point of stop j on route r
-
-    
     def create_cbus_b(self):
         """
         Create a dictionary mapping electric bus types to their capital costs.
@@ -606,7 +606,7 @@ class data:
         Returns:
             dict: Dictionary mapping each route to a dictionary of non-battery vehicle types and their counts
         """
-        base_values = [r for r in range(0, self.n_old_non_battery_buses_per_route + 1)]
+        base_values = [r for r in range(1, self.n_old_non_battery_buses_per_route + 1)]
         
         nv_rb_0 = {
             r: {v: self.rng.choice(base_values) for v in self.V_r[r]} for r in self.R
@@ -694,7 +694,7 @@ class data:
         Returns:
             dict: Dictionary mapping each route to its lower traffic interval bound
         """
-        base_values = [6, 18, 4, 13, 9, 36, 27, 13, 15, 7, 4, 8]
+        base_values = [5]
         lt_r = {r: self.rng.choice(base_values) for r in self.R}
 
         return lt_r
@@ -706,7 +706,7 @@ class data:
         Returns:
             dict: Dictionary mapping each route to its upper traffic interval bound
         """
-        ut_r = {r: self.lt_r[r]+2 for r in self.R}
+        ut_r = {r: self.lt_r[r]+10 for r in self.R}
         return ut_r
 
     '''

@@ -40,19 +40,8 @@ usare network x per generare una rete per caso base
 1) Heuristics how to implement maintaining fisability?
 2) Should we rework all the data class so that it creates a copy of the dataset used in the paper? Maybe changing only the cc_uoc costs couple?
 
-### TO DO LIST
-
-- implement classes to create an instance and work with that
-- the main must be short
-- create a small dataset for base case to put in the model class and try
-- understand heruistics
-- implement base case and with heuristics
--
-1) finish constraints
-2) create a smaaaaall dataset to try and print the result
-3) understand Heuristic
-4) implemnt class "model" and maybe class "dataset"
-5) compare heuristic with correct algotirhm
+### 02/09/2025
+-   changed the random pool of numbers to create ct_rjbc in order to try and make the dataset feasible
 
 
 

@@ -7,16 +7,14 @@ data_obj = data(
     n_types_chargers=1,
     n_types_elec_buses=3,
     n_types_non_battery_buses=2,
-    upper_limit_charging_points=10,
-    upper_limit_charging_plugs=20,
+    upper_limit_charging_points=100,
+    upper_limit_charging_plugs=200,
     n_routes=20,
     n_stops=15,
     seed=43
 )
 
 instance1 = OptimizationInstance(data_obj)
-instance2 = OptimizationInstance(data_obj)
-instance3 = OptimizationInstance(data_obj)
 
 # Set parameters
 for instance in [instance1]:
