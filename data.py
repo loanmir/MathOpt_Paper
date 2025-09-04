@@ -986,7 +986,7 @@ class data:
 
         # This is to generate S_rbc_s
         S_rbc_s = {}
-        pi_r = self.create_pi_r()  # stop sequence of route r
+        pi_r = self.pi_r  # stop sequence of route r
         distance_r = self.create_distance_r()  # distance of each stop in route r
         for r in self.R:
             stops = pi_r[r]
@@ -1014,8 +1014,8 @@ class data:
         Returns:
             dict: Dictionary mapping (route, bus type, charging type) to the number of scenarios
         """
-        pi_r = self.create_pi_r()  # stop sequence of route r
-        d_r = self.create_d_r()  # depot of route r
+        pi_r = self.pi_r  # stop sequence of route r
+        d_r = self.d_r  # depot of route r
         # Define n_rbc
         n_rbc = {}
 
