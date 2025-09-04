@@ -2,5 +2,6 @@
 *.pdf
 *.pic
 *.pyc
+*.txt
 __pycache__/data.cpython-312.pyc
 __pycache__/instance.cpython-312.pyc

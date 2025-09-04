@@ -347,7 +347,7 @@ class data:
         Returns:
             dict: Dictionary mapping bus types to their maximum driving range
         """
-        base_distances = [8, 35, 20, 27, 20]
+        base_distances = [25, 35, 20, 27, 20]
         
         d_b_MAX = {}
         for i, bus in enumerate(self.B):
@@ -730,18 +730,25 @@ class data:
         route_depots = {}  # Track which depot each route belongs to
         
         def get_stops_near_depot(depot, max_distance=15):
-            """Get stops that are within max_distance of a depot"""
+            """
+            Get stops that are directly connected (adjacent) to the depot.
+            
+            Args:
+                depot: The depot node to check from
+                max_distance: Not used anymore since we only care about direct connections
+                
+            Returns:
+                list: List of tuples (stop, distance) that are directly connected to the depot
+            """
             nearby_stops = []
-            for node in self.G.nodes():
-                if (self.G.nodes[node]['type'] == 'stop' and 
-                    nx.has_path(self.G, depot, node)):
-                    try:
-                        dist = nx.shortest_path_length(self.G, depot, node, weight='distance')
-                        if dist <= max_distance:
-                            nearby_stops.append((node, dist))
-                    except nx.NetworkXNoPath:
-                        continue
-            return sorted(nearby_stops, key=lambda x: x[1])  # Sort by distance
+            # Get only direct neighbors of the depot
+            for neighbor in self.G.neighbors(depot):
+                if self.G.nodes[neighbor]['type'] == 'stop':
+                    # Get the direct edge distance
+                    dist = self.G.edges[depot, neighbor]['distance']
+                    nearby_stops.append((neighbor, dist))
+                    
+            return sorted(nearby_stops, key=lambda x: x[1])  # Still sort by distance for convenience
         
         def get_valid_neighbors(current_stop, visited):
             """Get unvisited neighboring stops"""
@@ -760,20 +767,16 @@ class data:
             if not nearby_stops:
                 return None
             
-            # Pick one of the closest stops as starting point
-            if self.rng.random() < 0.7:  # 70% chance to pick from closest 3
-                start_stop = self.rng.choice(nearby_stops[:3])[0]
-            else:  # 30% chance to pick any nearby stop
-                start_stop = self.rng.choice(nearby_stops)[0]
+            start_stop = self.rng.choice(nearby_stops)[0]
             
             # Randomly decide route length
             route_type = self.rng.random()
-            if route_type < 0.3:    # 30% short routes (2-3 stops)
+            if route_type < 0.6:    # 60% short routes (2-3 stops)
                 n_stops = self.rng.randint(2, 3)
-            elif route_type < 0.7:  # 40% medium routes (4-6 stops)
-                n_stops = self.rng.randint(4, 6)
-            else:                   # 30% long routes (7-9 stops)
-                n_stops = self.rng.randint(7, 9)
+            elif route_type < 0.9:  # 30% medium routes (4-6 stops)
+                n_stops = self.rng.randint(3, 4)
+            else:                   # 10% long routes (7-9 stops)
+                n_stops = self.rng.randint(4, 5)
             
             route = [start_stop]
             visited = {start_stop}
@@ -784,9 +787,9 @@ class data:
                 neighbors = get_valid_neighbors(current, visited)
                 if not neighbors:
                     break
-                    
-                # 70% chance to pick closest neighbor, 30% random
-                if self.rng.random() < 0.7 and neighbors:
+
+                # 50% chance to pick closest neighbor, 50% random
+                if self.rng.random() < 0.5 and neighbors:
                     next_stop = neighbors[0][0]  # Closest stop
                 else:
                     next_stop = self.rng.choice(neighbors)[0]  # Random stop
@@ -796,14 +799,14 @@ class data:
                 current = next_stop
             
             # Add return journey through same stops
-            if len(route) > 2:
+            if len(route) >= 2:
                 return_path = route[-2::-1]  # Exclude last stop and reverse
                 route.extend(return_path)
             
             # Complete the circle
             # route.append(start_stop)
             
-            return route if len(route) >= 3 else None
+            return route if len(route) >= 2 else None
         
         # Distribute routes among depots
         depots = [n for n in self.G.nodes() if self.G.nodes[n]['type'] == 'depot']
@@ -987,7 +990,7 @@ class data:
         # This is to generate S_rbc_s
         S_rbc_s = {}
         pi_r = self.pi_r  # stop sequence of route r
-        distance_r = self.create_distance_r()  # distance of each stop in route r
+        distance_r = self.distance_r  # distance of each stop in route r
         for r in self.R:
             stops = pi_r[r]
             stop_dists = distance_r[r]
@@ -1073,7 +1076,7 @@ class data:
         for j in self.N:
             if j not in self.D:
                 for c in self.C:
-                    for r in R_jc[j, c]:
+                    for r in R_jc[j, c] if (j,c) in R_jc else []:
                         # Initialize nested dictionaries if not present
                         if j not in nc_jrc_max:
                             nc_jrc_max[j] = {}
@@ -1102,7 +1105,7 @@ class data:
         for j in self.N:
             if j not in self.D:
                 for c in self.C:
-                    for r in R_jc[j, c]:
+                    for r in R_jc[j, c]  if (j,c) in R_jc else []:
                         # Initialize nested dictionaries if not present
                         if j not in noc_jrc_ct:
                             noc_jrc_ct[j] = {}

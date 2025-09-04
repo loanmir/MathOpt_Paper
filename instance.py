@@ -3,11 +3,15 @@ import data_inizialization as di
 from gurobipy import Model
 import heuristics as he
 from data import data
+import logging
 #from data import G, R, D, N, NO, T, T_j, TO, TO_j, B, BO, C, cap_b, B_r, C_b, pi_r, dem_r, dem_0_r, ub_rb, nv_rb_0, V_r, co_b, n_rbc, cc_uoc_pairs, csta_j, ccp_c, cbus_b, ccps_t, cl_tj, vcc_j, vcp_c, vcb_rb, nod_jc, utp_t, p_c, up_j, nop_jc, uc_c, R_jc, L_r, ut_r, lt_r, nob_rb, nob_rbc, B_rc, ct_rjbc, nc_jrc_max, noc_jrc_ct, S_rbc_s
 
 # REMEMBER!! -> Most of data will be taken from the data.py file -> So we will need to remove the "self." every time we access some input(CONSTANT)
 # For the "dynamic inputs", so the one we can define as we wish -> They must be constructed within the constructor "__init_", and so they will be accessed through self.!!
 
+ # Add logging for Constraints 40 and 61
+
+logging.basicConfig(filename='constraints_log.txt', level=logging.DEBUG)
 
 class OptimizationInstance:
     def __init__(self, data_obj: data):
@@ -544,6 +548,11 @@ class OptimizationInstance:
                 for r in self.R_jc.get((j, c), []):
                     if (j, r, c) in self.nc_jrc:
                         for b in self.B_rc[r][c]:
+
+                            # Log values before constraint
+                            logging.debug(f"\nConstraint 40 for {j}, {r}, {c}, {b}:")
+                            logging.debug(f"noc_jrc_ct = {self.noc_jrc_ct[j][r][c]}")
+
                             self.model.addConstr(
                                 self.nc_jrc_ct[j, r, c] >= self.noc_jrc_ct[j][r][c],
                                 name=f"Constraint_40_{j}_{r}_{c}_{b}"
@@ -649,6 +658,10 @@ class OptimizationInstance:
             for j in self.pi_r[r]:
                 for c in self.C:
                     if j in self.nc_jrc_max and r in self.nc_jrc_max[j] and c in self.nc_jrc_max[j][r]:
+                        # Log values before constraints
+                        logging.debug(f"\nConstraint 61 for {j}, {r}, {c}:")
+                        logging.debug(f"nc_jrc_max = {self.nc_jrc_max[j][r][c]}")
+
                         self.model.addConstr(
                             self.nc_jrc_ct[j, r, c] >= 0,
                             name=f"Constraint_61_a_{j}_{r}_{c}"
@@ -657,6 +670,17 @@ class OptimizationInstance:
                             self.nc_jrc_ct[j, r, c] <= self.nc_jrc_max[j][r][c],
                             name=f"Constraint_61_b_{j}_{r}_{c}"
                         )
+
+                        # Log the actual constraint
+                        logging.debug(f"Added constraint: 0 <= nc_jrc_ct[{j},{r},{c}] <= {self.nc_jrc_max[j][r][c]}")
+
+                        # Check for potential conflict
+                        if self.noc_jrc_ct[j][r][c] > self.nc_jrc_max[j][r][c]:
+                            logging.warning(
+                                f"CONFLICT DETECTED at {j}, {r}, {c}: "
+                                f"noc_jrc_ct ({self.noc_jrc_ct[j][r][c]}) > "
+                                f"nc_jrc_max ({self.nc_jrc_max[j][r][c]})"
+                            )
 
         # Constraint (62)
         for r in self.R:
