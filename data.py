@@ -82,6 +82,12 @@ class data:
         self.dem_0_r = self.create_dem_0_r()
         self.ub_rb = self.create_ub_rb()
 
+        print("=== DATA SNAPSHOT ===")
+        print("R:", self.R)
+        print("B_r[r1]:", self.B_r[self.R[0]])
+        print("C_b:", self.C_b)
+        print("n_rbc[r1, b, c]:",{(b, c): self.n_rbc.get((self.R[0], b, c), None) for b in self.B_r[self.R[0]] for c in self.C_b[b]})
+
 
     def create_graph(self):
         """
@@ -1087,6 +1093,7 @@ class data:
                             r, j, c, self.B_rc[r][c], self.ct_rjbc, lt_r[r]
                         )  # This will compute the maximum number of plug devices at stop j, route r, charger type c
                         nc_jrc_max[j][r][c] = x
+
         return nc_jrc_max
 
     def create_noc_jrc_ct(self):
@@ -1116,7 +1123,8 @@ class data:
                             r, j, c, self.BO_rc[r][c], self.ct_rjbc, lt_r[r]
                         )  # This will compute the maximum number of plug devices at stop j, route r, charger type c
                         noc_jrc_ct[j][r][c] = x
-
+                        if noc_jrc_ct[j][r][c] > self.nc_jrc_max[j][r][c]:
+                            noc_jrc_ct[j][r][c] = self.nc_jrc_max[j][r][c]
         return noc_jrc_ct
 
 

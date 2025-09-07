@@ -82,6 +82,7 @@ class OptimizationInstance:
         self.ub_rb = self.data.ub_rb
 
         self._define_variables()
+        self.preprocessing()
         self._define_constraints()
         self._set_objective()
 
@@ -102,12 +103,12 @@ class OptimizationInstance:
             name="nb_rbc"
         )# NB_RBC
 
-        self.y_rbc = self.model.addVars([(r, b, c) for r in self.R for b in self.B_r[r] for c in self.C_b[b]], vtype=gb.GRB.BINARY, name="y_rbc") # Y_RBC
+        self.y_rbc = self.model.addVars([(r, b, c) for r in self.R for b in self.B_r[r] for c in self.C_b[b] if self.n_rbc[(r, b, c)] > 0], vtype=gb.GRB.BINARY, name="y_rbc") # Y_RBC          #updated for n_rbc > 0 -> constraint 14
         self.y_r = self.model.addVars(self.R, vtype=gb.GRB.BINARY, name="y_r") #Y_R
         self.y_rb = self.model.addVars([(r, b) for r in self.R for b in self.B_r[r]], vtype=gb.GRB.BINARY, name="y_rb") #Y_RB
 
         self.y_rbc_s = self.model.addVars(
-            [(r, b, c, s) for r in self.R for b in self.B_r[r] for c in self.C_b[b] for s in range(1, self.n_rbc[(r, b, c)] + 1)],
+            [(r, b, c, s) for r in self.R for b in self.B_r[r] for c in self.C_b[b] if self.n_rbc[(r, b, c)] > 0 for s in range(1, self.n_rbc[(r, b, c)] + 1)],              #updated for n_rbc > 0 -> constraint 14
             vtype=gb.GRB.BINARY,
             name="y_rbc_s")         #Y_RBC_S
 
@@ -240,7 +241,7 @@ class OptimizationInstance:
         for r in self.R:
             for b in (bus for bus in self.BO if bus in self.B_r[r]):
                 m.addConstr(
-                    gb.quicksum(self.y_rbc[r, b, c] - self.y_rbco_b[r, b, self.co_b[b][0]] for c in self.C_b[b]) <= 0,
+                    gb.quicksum(self.y_rbc[r, b, c] - self.y_rbco_b[r, b, self.co_b[b][0]] for c in self.C_b[b] if (r,b,c) in self.y_rbc) <= 0,
                     name=f"Constraint_6_{r}_{b}"
                 )
 
@@ -287,6 +288,14 @@ class OptimizationInstance:
 
         # Constraint (12)
         for r in self.R:
+            max_cap = 0
+            for b in self.B_r[r]:
+                for c in self.C_b[b]:
+                    max_cap += self.cap_b[b] * self.ub_rb[r][b]
+            for b in self.V_r[r]:
+                max_cap += self.cap_b[b] * self.nv_rb_0[r][b]
+            print(f"[DEBUG] Route {r}: demand={self.dem_0_r[r]}, max_capacity={max_cap}")
+
             m.addConstr(
                 gb.quicksum(
                     self.cap_b[b] * gb.quicksum(self.nb_rbc[r, b, c] for c in self.C_b[b]) for b in self.B_r[r]) +
@@ -306,11 +315,15 @@ class OptimizationInstance:
         for r in self.R:
             for b in self.B_r[r]:
                 for c in self.C_b[b]:
-                    self.model.addConstr(
-                        self.y_rbc[r, b, c] - gb.quicksum(
-                            self.y_rbc_s[r, b, c, s] for s in range(1, self.n_rbc[r, b, c] + 1)) <= 0,
-                            name=f"Constraint_14_{r}_{b}_{c}"
-                    )
+                    if (r,b,c) in self.y_rbc:                                                                           # updated for n_rbc
+                        self.model.addConstr(
+                            self.y_rbc[r, b, c] - gb.quicksum(
+                                self.y_rbc_s[r, b, c, s] for s in range(1, self.n_rbc[r, b, c] + 1)) <= 0,
+                                name=f"Constraint_14_{r}_{b}_{c}"
+                        )
+                        n = self.n_rbc.get((r, b, c), 0)
+                        if n == 0:
+                            print(f"[WARN] (r={r}, b={b}, c={c}) has n_rbc=0 → y_rbc_s will be empty but y_rbc exists")
 
         # Constraint (15)
         for r in self.R:
@@ -331,25 +344,27 @@ class OptimizationInstance:
         for r in self.R:
             for b in self.B_r[r]:
                 for c in self.C_b[b]:
-                    self.model.addConstr(
-                        self.nb_rbc[r, b, c] >= self.y_rbc[r, b, c],
-                        name=f"Constraint_17_{r}_{b}_{c}"
-                    )
+                    if (r, b, c) in self.y_rbc:                 # updated for n_rbc
+                        self.model.addConstr(
+                            self.nb_rbc[r, b, c] >= self.y_rbc[r, b, c],
+                            name=f"Constraint_17_{r}_{b}_{c}"
+                        )
 
         # Constraint (18)
         for r in self.R:
             for b in self.B_r[r]:
                 for c in self.C_b[b]:
-                    self.model.addConstr(
-                        self.nb_rbc[r, b, c] <= self.ub_rb[r][b] * self.y_rbc[r, b, c],
-                        name=f"Constraint_18_{r}_{b}_{c}"
-                    )
+                    if (r, b, c) in self.y_rbc:                 # updated for n_rbc
+                        self.model.addConstr(
+                            self.nb_rbc[r, b, c] <= self.ub_rb[r][b] * self.y_rbc[r, b, c],
+                            name=f"Constraint_18_{r}_{b}_{c}"
+                        )
 
         # Constraint (19)
         for r in self.R:
             for b in self.B_r[r]:
                 self.model.addConstr(
-                    self.y_rb[r, b] == gb.quicksum(self.y_rbc[r, b, c] for c in self.C_b[b]),
+                    self.y_rb[r, b] == gb.quicksum(self.y_rbc[r, b, c] for c in self.C_b[b] if (r,b,c) in self.y_rbc),              # updated for n_rbc
                     name=f"Constraint_19_{r}_{b}"
                 )
 
@@ -385,9 +400,13 @@ class OptimizationInstance:
 
         # Constraint (24)
         for r in self.R:
-             self.model.addConstr(
+            total_options = sum(len(self.C_b[b]) for b in self.B_r[r])
+            if total_options == 0:
+                print(f"[WARN] Route {r} has no (b,c) options → y_r will be forced to 0")
+
+            self.model.addConstr(
                 self.y_r[r] <= gb.quicksum(
-                    gb.quicksum(self.y_rbc[r, b, c] for c in self.C_b[b]) for b in self.B_r[r]),
+                    gb.quicksum(self.y_rbc[r, b, c] for c in self.C_b[b]) for b in self.B_r[r] if (r,b,c) in self.y_rbc),           # updated for n_rbc
                     name=f"Constraint_24_{r}"
             )
 
@@ -396,7 +415,7 @@ class OptimizationInstance:
             B_r_size = len(self.B_r[r])
             self.model.addConstr(
                 B_r_size * self.y_r[r] >= gb.quicksum(
-                    gb.quicksum(self.y_rbc[r, b, c] for c in self.C_b[b]) for b in self.B_r[r]),
+                    gb.quicksum(self.y_rbc[r, b, c] for c in self.C_b[b]) for b in self.B_r[r] if (r,b,c) in self.y_rbc),           # updated for n_rbc
                     name=f"Constraint_25_{r}"
             )
 
@@ -432,11 +451,27 @@ class OptimizationInstance:
         # Constraint (29)
         # lt_r[r]
         for r in self.R:
+            print(f"[DEBUG] Route {r}: L_r={self.L_r[r]}, lt_r={self.lt_r[r]}, ut_r={self.ut_r[r]}")
+
+            self.model.addConstr(
+                self.L_r[r] * self.y_r[r] >= self.lt_r[r] * (
+                        gb.quicksum(gb.quicksum(self.nb_rbc[r, b, c] for c in self.C_b[b]) for b in self.B_r[r]) +
+                        gb.quicksum(self.nv_rb[r, b] for b in self.V_r[r]) +
+                        gb.quicksum(self.nob_rb.get(r, {}).get(b, 0) for b in self.B_r[r])
+                ) * self.y_r[r],  # scale whole RHS by y_r[r]
+                name=f"Constraint_29_{r}"
+            )
+
+            # Log values before constraint
+            #logging.debug(f"\nConstraint 29 for {r}]:")
+            #logging.debug(f"y_r = {self.y_r[r]}")
+            '''
             self.model.addConstr(self.L_r[r] * self.y_r[r] >= self.lt_r[r] * (
                 gb.quicksum(gb.quicksum(self.nb_rbc[r, b, c] + self.nob_rb.get(r, {}).get(b, 0)
                 for c in self.C_b[b]) for b in self.B_r[r]) + gb.quicksum(self.nv_rb[r, b] for b in self.V_r[r])),
                 name=f"Constraint_29_{r}"
             )
+            '''
 
         # Constraint (30)
         for j in (j for j in self.D if j not in self.NO):
@@ -550,8 +585,8 @@ class OptimizationInstance:
                         for b in self.B_rc[r][c]:
 
                             # Log values before constraint
-                            logging.debug(f"\nConstraint 40 for {j}, {r}, {c}, {b}:")
-                            logging.debug(f"noc_jrc_ct = {self.noc_jrc_ct[j][r][c]}")
+                            #logging.debug(f"\nConstraint 40 for {j}, {r}, {c}, {b}:")
+                            #logging.debug(f"noc_jrc_ct = {self.noc_jrc_ct[j][r][c]}")
 
                             self.model.addConstr(
                                 self.nc_jrc_ct[j, r, c] >= self.noc_jrc_ct[j][r][c],
@@ -659,8 +694,8 @@ class OptimizationInstance:
                 for c in self.C:
                     if j in self.nc_jrc_max and r in self.nc_jrc_max[j] and c in self.nc_jrc_max[j][r]:
                         # Log values before constraints
-                        logging.debug(f"\nConstraint 61 for {j}, {r}, {c}:")
-                        logging.debug(f"nc_jrc_max = {self.nc_jrc_max[j][r][c]}")
+                        #logging.debug(f"\nConstraint 61 for {j}, {r}, {c}:")
+                        #logging.debug(f"nc_jrc_max = {self.nc_jrc_max[j][r][c]}")
 
                         self.model.addConstr(
                             self.nc_jrc_ct[j, r, c] >= 0,
@@ -672,7 +707,7 @@ class OptimizationInstance:
                         )
 
                         # Log the actual constraint
-                        logging.debug(f"Added constraint: 0 <= nc_jrc_ct[{j},{r},{c}] <= {self.nc_jrc_max[j][r][c]}")
+                        #logging.debug(f"Added constraint: 0 <= nc_jrc_ct[{j},{r},{c}] <= {self.nc_jrc_max[j][r][c]}")
 
                         # Check for potential conflict
                         if self.noc_jrc_ct[j][r][c] > self.nc_jrc_max[j][r][c]:
@@ -723,7 +758,78 @@ class OptimizationInstance:
 
             # Other constraints defined directly in variables (!?)
     # Solving method
+
+    def preprocessing(self):
+        # === PREPROCESS: disable infeasible routes wrt Constraint 29 ===
+        self.model.update()  # make sure variable attributes are available
+
+        for r in self.R:
+            # compute maximum RHS possible for this route
+            nb_sum = 0
+            for b in self.B_r[r]:
+                for c in self.C_b[b]:
+                    val = self.nb_rbc[r, b, c]
+                    if isinstance(val, gb.Var):
+                        nb_sum += val.getAttr("UB")  # upper bound
+                    else:
+                        nb_sum += float(val)
+
+            nob_sum = sum(self.nob_rb.get(r, {}).get(b, 0) for b in self.B_r[r])
+
+            nv_sum = 0
+            for b in self.V_r[r]:
+                val = self.nv_rb[r, b]
+                if isinstance(val, gb.Var):
+                    nv_sum += val.getAttr("UB")
+                else:
+                    nv_sum += float(val)
+
+            rhs_val = self.lt_r[r] * (nb_sum + nob_sum + nv_sum)
+            lhs_val = self.L_r[r]
+
+            if lhs_val < rhs_val - 1e-6:  # margin to avoid floating point issues
+                # Disable this route
+                self.y_r[r].UB = 0
+                print(f"[PREPROCESS] Disabled route {r}: LHS={lhs_val} < RHS={rhs_val}")
+
     def solve_algorithm(self):
+        '''
+        self.model.update()
+        # === DEBUG CHECK for r2 ===
+        r = "r2"
+        rhs_val = 0
+
+        # nb_rbc terms
+        nb_sum = 0
+        for b in self.B_r[r]:
+            for c in self.C_b[b]:
+                val = self.nb_rbc[r, b, c]
+                if isinstance(val, gb.Var):
+                    nb_sum += val.getAttr("UB")  # use upper bound
+                else:
+                    nb_sum += float(val)
+
+        # nob_rb terms
+        nob_sum = sum(self.nob_rb.get(r, {}).get(b, 0) for b in self.B_r[r])
+
+        # nv_rb terms
+        nv_sum = 0
+        for b in self.V_r[r]:
+            val = self.nv_rb[r, b]
+            if isinstance(val, gb.Var):
+                nv_sum += val.getAttr("UB")
+            else:
+                nv_sum += float(val)
+
+        rhs_val = self.lt_r[r] * (nb_sum + nob_sum + nv_sum)
+        lhs_val = self.L_r[r]
+
+        print(f"\n[DEBUG] Route {r}")
+        print(f"LHS (L_r) = {lhs_val}")
+        print(f"RHS (lt_r * (nb+nob+nv)) = {rhs_val}")
+        print(f"Feasible? {lhs_val >= rhs_val}")
+        '''
+
         self.model.optimize()
 
         if self.model.status == gb.GRB.INFEASIBLE:
