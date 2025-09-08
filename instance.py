@@ -354,7 +354,8 @@ class OptimizationInstance:
         for r in self.R:
             for b in self.B_r[r]:
                 for c in self.C_b[b]:
-                    if (r, b, c) in self.y_rbc:                 # updated for n_rbc
+                    print(f"DEBUG C18: r={r}, b={b}, c={c}, n_rbc={self.n_rbc.get((r, b, c))}, var_exists={(r, b, c) in self.y_rbc}")
+                    if (r, b, c) in self.y_rbc and self.n_rbc==0:                 # updated for n_rbc
                         self.model.addConstr(
                             self.nb_rbc[r, b, c] <= self.ub_rb[r][b] * self.y_rbc[r, b, c],
                             name=f"Constraint_18_{r}_{b}_{c}"
@@ -409,15 +410,39 @@ class OptimizationInstance:
                     gb.quicksum(self.y_rbc[r, b, c] for c in self.C_b[b]) for b in self.B_r[r] if (r,b,c) in self.y_rbc),           # updated for n_rbc
                     name=f"Constraint_24_{r}"
             )
-
+        '''
         # Constraint (25)
         for r in self.R:
+            lhs_terms = [(b, c) for b in self.B_r[r] for c in self.C_b[b] if (r, b, c) in self.y_rbc]
+            lhs_count = len(lhs_terms)
+
+            print(f"[DEBUG C25] r={r}, lhs_terms={lhs_terms}, lhs_count={lhs_count}, "
+                  f"y_r_exists={(r in self.y_r)}, y_r={self.y_r[r]}")
+
             B_r_size = len(self.B_r[r])
             self.model.addConstr(
                 B_r_size * self.y_r[r] >= gb.quicksum(
                     gb.quicksum(self.y_rbc[r, b, c] for c in self.C_b[b]) for b in self.B_r[r] if (r,b,c) in self.y_rbc),           # updated for n_rbc
                     name=f"Constraint_25_{r}"
             )
+        '''
+
+        # Constraint (25)
+        for r in self.R:
+            lhs_terms = [(b, c) for b in self.B_r[r] for c in self.C_b[b] if (r, b, c) in self.y_rbc]
+
+            print(f"[DEBUG C25] r={r}, lhs_terms={lhs_terms}, lhs_count={len(lhs_terms)}, y_r={self.y_r[r]}")
+
+            if lhs_terms:
+                # Standard form: if route is used, at least one (b,c) is active
+                self.model.addConstr(
+                    gb.quicksum(self.y_rbc[r, b, c] for (b, c) in lhs_terms) >= self.y_r[r],
+                    name=f"Constraint_25_{r}"
+                )
+            else:
+                # No feasible (b,c) → forbid the route
+                print(f"[WARN C25] Route {r} has no feasible (b,c). Forcing y_r[{r}] = 0.")
+                self.y_r[r].UB = 0
 
         # Constraint (26)
         for j in (j for j in self.D if j not in self.NO):
@@ -480,25 +505,62 @@ class OptimizationInstance:
                     self.uc_c[c] * self.alpha_jc[j, c] - self.nc_jc[j, c] <= 0,
                     name=f"Constraint_30_{j}_{c}"
                 )
-
+        '''
         # Constraint (31)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
+                print(f"DEBUG Stop7: route={r}, c={c}, y_rbc keys={[(rr, bb, cc) for (rr, bb, cc) in self.y_rbc.keys() if cc == 'c1']}")
                 self.model.addConstr(
                     self.nc_jc[j, c] == gb.quicksum(self.nc_jrc[j, r, c] - self.nod_jc[j, c] for r in self.R_jc.get((j, c), []) if (j, r, c) in self.nc_jrc),
                     name=f"Constraint_31_{j}_{c}"
                 )
+        '''
+        # Constraint (31)
+        lhs_terms = [(j, r, c) for r in self.R_jc.get((j, c), []) if (j, r, c) in self.nc_jrc]
 
+        print(f"[DEBUG C31] stop={j}, c={c}, lhs_terms={lhs_terms}, count={len(lhs_terms)}")
+
+        if lhs_terms:
+            self.model.addConstr(
+                self.nc_jc[j, c] == gb.quicksum(self.nc_jrc[j, r, c] for (j, r, c) in lhs_terms) - self.nod_jc[j, c],
+                name=f"Constraint_31_{j}_{c}"
+            )
+        else:
+            print(f"[WARN C31] Stop {j}, charger {c}: no feasible (j,r,c). Skipping.")
+
+        '''
         # Constraint (32)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
                 for r in self.R_jc.get((j, c), []):
+                    print(f"DEBUG Stop7: route={r}, c={c}, y_rbc keys={[(rr, bb, cc) for (rr, bb, cc) in self.y_rbc.keys() if cc == 'c1']}")
                     if (j, r, c) in self.nc_jrc:
                         self.model.addConstr(self.nc_jrc_b[j, r, c] ==
                             gb.quicksum(self.nb_rbc[r, b, c] + self.nob_rbc.get(r, {}).get(b, {}).get(c, 0)
                             for b in self.B_rc[r][c]),
                             name=f"Constraint_32_{j}_{r}_{c}"
                     )
+        '''
+        # Constraint (32)
+        for j in (j for j in self.N if j not in self.D):
+            for c in self.C:
+                for r in self.R_jc.get((j, c), []):
+                    print(
+                        f"DEBUG Stop7: route={r}, c={c}, y_rbc keys={[(rr, bb, cc) for (rr, bb, cc) in self.y_rbc.keys() if cc == 'c1']}")
+                    if (j, r, c) in self.nc_jrc:
+                        lhs_terms = [b for b in self.B_rc.get(r, {}).get(c, [])]
+                        print(f"[DEBUG C32] stop={j}, r={r}, c={c}, lhs_terms={lhs_terms}, count={len(lhs_terms)}")
+
+                        if lhs_terms:
+                            self.model.addConstr(
+                                self.nc_jrc_b[j, r, c] == gb.quicksum(
+                                    self.nb_rbc[r, b, c] + self.nob_rbc.get(r, {}).get(b, {}).get(c, 0)
+                                    for b in lhs_terms),
+                                name=f"Constraint_32_{j}_{r}_{c}"
+                            )
+                        else:
+                            print(f"[WARN C32] Stop {j}, route {r}, charger {c}: no feasible bases. Skipping.")
+
 
         # Constraint (33)
         for j in (j for j in self.N if j not in self.D):
@@ -509,16 +571,32 @@ class OptimizationInstance:
                             self.nc_jrc[j, r, c] <= self.nc_jrc_ct[j, r, c],
                             name=f"Constraint_33_{j}_{r}_{c}"
                     )
-
+        '''
         # Constraint (34)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
                 for r in self.R_jc.get((j, c), []):
+                    print(f"DEBUG Stop7: route={r}, c={c}, y_rbc keys={[(rr, bb, cc) for (rr, bb, cc) in self.y_rbc.keys() if cc == 'c1']}")
                     if (j, r, c) in self.nc_jrc:
                         self.model.addConstr(
                             self.nc_jrc[j, r, c] <= self.nc_jrc_b[j, r, c],
                             name=f"Constraint_34_{j}_{r}_{c}"
                     )
+        '''
+        # Constraint (34)
+        for j in (j for j in self.N if j not in self.D):
+            for c in self.C:
+                for r in self.R_jc.get((j, c), []):
+                    print(
+                        f"DEBUG Stop7: route={r}, c={c}, y_rbc keys={[(rr, bb, cc) for (rr, bb, cc) in self.y_rbc.keys() if cc == 'c1']}")
+                    if (j, r, c) in self.nc_jrc and (j, r, c) in self.nc_jrc_b:
+                        print(f"[DEBUG C34] stop={j}, r={r}, c={c} → adding constraint")
+                        self.model.addConstr(
+                            self.nc_jrc[j, r, c] <= self.nc_jrc_b[j, r, c],
+                            name=f"Constraint_34_{j}_{r}_{c}"
+                        )
+                    else:
+                        print(f"[WARN C34] stop={j}, r={r}, c={c} → skipping (no feasible term)")
 
         # Constraint (35)
         for j in (j for j in self.N if j not in self.D):
@@ -735,6 +813,15 @@ class OptimizationInstance:
             for j in self.pi_r[r]:
                 for c in self.C:
                     if j in self.nc_jrc_max and r in self.nc_jrc_max[j] and c in self.nc_jrc_max[j][r]:
+                        ub_val = min(self.up_j[j] * self.uc_c[c], self.nc_jrc_max[j][r][c])
+                        lb_val = 0
+
+                        # === DEBUG PRINT ===
+                        print(f"[DEBUG C63] j={j}, r={r}, c={c}, "
+                              f"up_j={self.up_j.get(j)}, uc_c={self.uc_c.get(c)}, "
+                              f"nc_jrc_max={self.nc_jrc_max[j][r][c]}, "
+                              f"LHS var={self.nc_jrc[j, r, c]}, LB={lb_val}, UB={ub_val}")
+
                         self.model.addConstr(
                             self.nc_jrc[j, r, c] >= 0,
                             name=f"Constraint_63_a_{j}_{r}_{c}"
