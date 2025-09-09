@@ -1,17 +1,18 @@
 import gurobipy as gb
 from data import data
 from instance import OptimizationInstance
-from scalability import run_scalability
+
 
 data_obj = data(
-    n_types_chargers=1,
-    n_types_elec_buses=3,
-    n_types_non_battery_buses=2,
-    upper_limit_charging_points=100,
-    upper_limit_charging_plugs=200,
-    n_routes=20,
-    n_stops=15,
-    seed=43
+    n_types_chargers=3,
+    n_types_elec_buses=2,
+    n_types_non_battery_buses=1,
+    upper_limit_charging_points=10,
+    upper_limit_charging_plugs=20,
+    n_routes=3,
+    n_stops=3,
+    seed=43,
+    cc_ouc_pair_list=[(0, 1e8)]
 )
 
 instance1 = OptimizationInstance(data_obj)

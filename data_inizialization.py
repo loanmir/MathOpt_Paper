@@ -72,26 +72,24 @@ def compute_noc_jrc_ct(route_r, stop_j, charge_type_c, BO_rc, ct_rjbc_dict, ltr_
     return noc_jrc_ct
 
 
-def generate_feasible_scenarios(route_id, stops, stop_distances, b_type, c_type, dmax_b):
-    """
-    route_id: e.g., 'r1'
-    stops: ordered list of stops on the route cycle, e.g., ['j1', 'j2', 'j3', 'j1']
-    stop_distances: list of distances between consecutive stops, same length as stops-1
-    b_type: bus type
-    c_type: charger type
-    dmax_b: max driving distance for bus type
-    """
 
+
+def generate_feasible_scenarios(route_id, stops, stop_distances, b_type, c_type, dmax_b):
+    """Generate ordered feasible charging stop sequences"""
+    from itertools import combinations
+    
     scenarios = []
     num_stops = len(stops)
     
-    # Try all combinations of 1, 2, ..., k charging stops
-    from itertools import combinations
+    # For each possible number of charging stops
     for k in range(1, num_stops + 1):
-        for candidate_stops in combinations(stops, k):
-            # simulate driving with charges only at these stops
+        for indices in combinations(range(num_stops), k):
+            candidate_stops = [stops[i] for i in indices]
+            
+            # Check feasibility based on maximum distance
             dist_since_last_charge = 0
             feasible = True
+            
             for i in range(num_stops):
                 dist_since_last_charge += stop_distances[i % len(stop_distances)]
                 if stops[i % num_stops] in candidate_stops:
@@ -99,9 +97,10 @@ def generate_feasible_scenarios(route_id, stops, stop_distances, b_type, c_type,
                 if dist_since_last_charge > dmax_b:
                     feasible = False
                     break
+            
             if feasible:
                 scenarios.append(candidate_stops)
-
+    
     return scenarios
 
 
