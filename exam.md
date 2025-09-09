@@ -64,3 +64,5 @@ thing to do for 06/08/2025
 IDEA: using 2 contructors, 1 with csv and 1 with normal inputs.
 
 
+### QUESTIONS
+1. Does in the current way BO will be always equal to B?
