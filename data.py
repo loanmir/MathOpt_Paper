@@ -379,20 +379,21 @@ class data:
     def create_d_b_MAX(self):
         """
         Create a dictionary mapping electric bus types to their maximum driving range.
-        Base distances are reused cyclically if there are more buses than base distances.
+        Generates random distances between 8 and 40 km for each bus type.
         
         Returns:
             dict: Dictionary mapping bus types to their maximum driving range
         """
-        base_distances = [15, 17, 8, 9, 12]
-        
         d_b_MAX = {}
-        for i, bus in enumerate(self.B):
-            # Use modulo to cycle through base_distances
-            distance_index = i % len(base_distances)
-            d_b_MAX[bus] = base_distances[distance_index]
         
-        return d_b_MAX # Maximum driving range for each bus type
+        print("\nBus Maximum Driving Ranges:")
+        print("=========================")
+        
+        for bus in self.B:
+            d_b_MAX[bus] = self.rng.randint(8, 40)
+            print(f"{bus}: {d_b_MAX[bus]} km")
+        
+        return d_b_MAX
 
     def create_ct_rjbc(self):
             """
@@ -421,16 +422,21 @@ class data:
     def create_cbus_b(self):
         """
         Create a dictionary mapping electric bus types to their capital costs.
+        Generates random costs between 300,000 and 500,000 for each bus.
         
         Returns:
             dict: Dictionary mapping bus types to their capital costs
         """
-        base_costs = [400000, 500000, 350000, 300000, 450000]  # Base costs for electric buses
         cbus_b = {}
-        for i, bus in enumerate(self.B):
-            # Use modulo to cycle through base_costs
-            cbus_b[bus] = self.rng.choice(base_costs)
-        return cbus_b # b_bus_types-type electric bus capital cost (initial investment for buying bus)
+        
+        print("\nBus Capital Costs:")
+        print("=================")
+        
+        for bus in self.B:
+            cbus_b[bus] = self.rng.randint(300000, 500000)
+            print(f"{bus}: €{cbus_b[bus]:,}")
+        
+        return cbus_b  # capital cost for each bus type
     
     def create_vcb_rb(self):
         """
@@ -1301,15 +1307,7 @@ class data:
     def create_random_graph(self, n_depots=2, n_stops=23):
         """
         Create a random graph with specified number of depots and stops.
-        Automatically creates connections between nodes based on proximity.
-        
-        Args:
-            n_depots (int): Number of depot nodes
-            n_stops (int): Number of stop nodes
-            seed (int): Random seed for reproducibility
-            
-        Returns:
-            nx.Graph: Generated graph with nodes and edges
+        All edge distances are random values between 8 and 35.
         """
         import networkx as nx
         import random
@@ -1332,9 +1330,9 @@ class data:
             depot_name = f"Depot{i+1}"
             coords[depot_name] = (x, y)
             G.add_node(depot_name, 
-                       type="depot", 
-                       charging_possible=True, 
-                       pos=(x, y))
+                    type="depot", 
+                    charging_possible=True, 
+                    pos=(x, y))
         
         # Place stops in a wider area
         for i in range(n_stops):
@@ -1353,65 +1351,54 @@ class data:
             stop_name = f"Stop{i+1}"
             coords[stop_name] = (x, y)
             G.add_node(stop_name, 
-                       type="stop", 
-                       charging_possible=random.random() > 0.2,  # 80% chance of charging
-                       pos=(x, y))
+                    type="stop", 
+                    charging_possible=random.random() > 0.2,  # 80% chance of charging
+                    pos=(x, y))
         
         # Connect depots to nearby stops
         for depot in [n for n in G.nodes() if G.nodes[n]['type'] == 'depot']:
-            # Connect to closest 3-5 stops
             stops = [n for n in G.nodes() if G.nodes[n]['type'] == 'stop']
             distances = [(stop, np.sqrt((coords[depot][0] - coords[stop][0])**2 + 
-                                      (coords[depot][1] - coords[stop][1])**2))
+                                    (coords[depot][1] - coords[stop][1])**2))
                         for stop in stops]
             distances.sort(key=lambda x: x[1])
             
             n_connections = random.randint(3, 5)
-        for stop, dist in distances[:n_connections]:
-            # Scale distance to be between 4 and 15
-            scaled_dist = int((dist / 141.4) * 11) + 4  # 141.4 is max possible distance in 100x100 grid
-            G.add_edge(depot, stop, distance=scaled_dist)
+            for stop, _ in distances[:n_connections]:
+                # Random distance between 8 and 35
+                G.add_edge(depot, stop, distance=random.randint(8, 35))
         
         # Connect stops to their nearest neighbors
         stops = [n for n in G.nodes() if G.nodes[n]['type'] == 'stop']
         for stop in stops:
-            # Calculate distances to other stops
             other_stops = [s for s in stops if s != stop]
             distances = [(other, np.sqrt((coords[stop][0] - coords[other][0])**2 + 
-                                       (coords[stop][1] - coords[other][1])**2))
+                                    (coords[stop][1] - coords[other][1])**2))
                         for other in other_stops]
             distances.sort(key=lambda x: x[1])
             
-            # Connect to 2-4 nearest neighbors
             n_connections = random.randint(2, 4)
-            for other, dist in distances[:n_connections]:
+            for other, _ in distances[:n_connections]:
                 if not G.has_edge(stop, other):
-                    G.add_edge(stop, other, distance=int(dist/2))
+                    # Random distance between 8 and 35
+                    G.add_edge(stop, other, distance=random.randint(8, 35))
         
         # Ensure graph is connected
         if not nx.is_connected(G):
             components = list(nx.connected_components(G))
             for i in range(len(components)-1):
-                # Connect closest nodes between components
                 comp1, comp2 = components[i], components[i+1]
-                min_dist = float('inf')
                 best_edge = None
-                
                 for n1 in comp1:
                     for n2 in comp2:
-                        dist = np.sqrt((coords[n1][0] - coords[n2][0])**2 + 
-                                       (coords[n1][1] - coords[n2][1])**2)
-                        if dist < min_dist:
-                            min_dist = dist
+                        if not G.has_edge(n1, n2):
                             best_edge = (n1, n2)
-                
+                            break
                 if best_edge:
-                    G.add_edge(best_edge[0], best_edge[1], distance=int(min_dist/2))
+                    # Random distance between 8 and 35
+                    G.add_edge(best_edge[0], best_edge[1], distance=random.randint(8, 35))
 
-        ###
         self.visualize_graph(G, coords)
-        ###
-
         return G, coords
 
     # Example usage:

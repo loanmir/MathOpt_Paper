@@ -5,16 +5,18 @@ from instance import OptimizationInstance
 
 data_obj = data(
     n_types_chargers=3,
-    n_types_elec_buses=15,
+    n_types_elec_buses=10,
     n_types_non_battery_buses=2,
-    upper_limit_charging_points=1500,
-    upper_limit_charging_plugs=1500,
-    n_routes=45,
-    n_stops=75,
+    upper_limit_charging_points=150,
+    upper_limit_charging_plugs=150,
+    n_routes=25,
+    n_stops=26,
     seed=42,
     cc_ouc_pair_list=[(2e7, 2e8)],
     max_n_old_charging_devices_per_stop=20,
     max_n_old_charging_plugs_per_stop=20,
+    max_n_old_elec_buses_per_route=1,
+    n_old_elec_buses=3
 )
 
 instance1 = OptimizationInstance(data_obj)
@@ -25,6 +27,7 @@ for instance in [instance1]:
     instance.model.setParam('MIPGap', 0)
     instance.model.setParam('IntFeasTol', 1e-9)
     instance.model.setParam('FeasibilityTol', 1e-9)
+    instance1.model.setParam('TimeLimit', 300) # Add time limit of 300 seconds (5 minutes)
 
 model_algorithm = instance1.solve_algorithm()
 
