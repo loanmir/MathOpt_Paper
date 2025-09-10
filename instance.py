@@ -355,7 +355,7 @@ class OptimizationInstance:
             for b in self.B_r[r]:
                 for c in self.C_b[b]:
                     print(f"DEBUG C18: r={r}, b={b}, c={c}, n_rbc={self.n_rbc.get((r, b, c))}, var_exists={(r, b, c) in self.y_rbc}")
-                    if (r, b, c) in self.y_rbc and self.n_rbc==0:                 # updated for n_rbc
+                    if (r, b, c) in self.y_rbc and self.n_rbc.get((r, b, c), 0) ==0:                 # updated for n_rbc
                         self.model.addConstr(
                             self.nb_rbc[r, b, c] <= self.ub_rb[r][b] * self.y_rbc[r, b, c],
                             name=f"Constraint_18_{r}_{b}_{c}"
@@ -660,28 +660,43 @@ class OptimizationInstance:
             for c in self.C:
                 for r in self.R_jc.get((j, c), []):
                     if (j, r, c) in self.nc_jrc:
-                        for b in self.B_rc[r][c]:
-
-                            # Log values before constraint
-                            #logging.debug(f"\nConstraint 40 for {j}, {r}, {c}, {b}:")
-                            #logging.debug(f"noc_jrc_ct = {self.noc_jrc_ct[j][r][c]}")
-
+                        # Check if the nested keys exist
+                        if (j in self.noc_jrc_ct and 
+                            r in self.noc_jrc_ct[j] and 
+                            c in self.noc_jrc_ct[j][r]):
+                            
                             self.model.addConstr(
                                 self.nc_jrc_ct[j, r, c] >= self.noc_jrc_ct[j][r][c],
-                                name=f"Constraint_40_{j}_{r}_{c}_{b}"
-                        )
-
+                                name=f"Constraint_40_{j}_{r}_{c}"
+                            )
+                        else:
+                            print(f"[WARN] Missing noc_jrc_ct entry for j={j}, r={r}, c={c}")
+                            print(f"Available charger types in noc_jrc_ct[{j}][{r}]: {self.noc_jrc_ct.get(j, {}).get(r, {}).keys()}")
+                        
         # Constraint (41)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
                 for r in self.R_jc.get((j, c), []):
                     if (j, r, c) in self.nc_jrc:
-                        for b in self.B_rc[r][c]:
+                        # Check if all required nested keys exist
+                        if (j in self.noc_jrc_ct and 
+                            r in self.noc_jrc_ct[j] and 
+                            c in self.noc_jrc_ct[j][r] and
+                            j in self.nc_jrc_max and
+                            r in self.nc_jrc_max[j] and
+                            c in self.nc_jrc_max[j][r]):
+                            
                             self.model.addConstr(
                                 self.nc_jrc_ct[j, r, c] <= (
-                                self.noc_jrc_ct[j][r][c] + self.nc_jrc_max[j][r][c] * (1 - self.xi_jrc[j, r, c])),
-                                name=f"Constraint_41_{j}_{r}_{c}_{b}"
-                        )
+                                    self.noc_jrc_ct[j][r][c] + 
+                                    self.nc_jrc_max[j][r][c] * (1 - self.xi_jrc[j, r, c])
+                                ),
+                                name=f"Constraint_41_{j}_{r}_{c}"
+                            )
+                        else:
+                            print(f"[WARN] Missing data for Constraint 41 at j={j}, r={r}, c={c}")
+                            print(f"  noc_jrc_ct available: {j in self.noc_jrc_ct and r in self.noc_jrc_ct[j]}")
+                            print(f"  nc_jrc_max available: {j in self.nc_jrc_max and r in self.nc_jrc_max[j]}")
 
         # Constraint (42)
         for j in (j for j in self.N if j not in self.D):
@@ -709,11 +724,16 @@ class OptimizationInstance:
             for b in self.B_r[r]:
                 for c in self.C_b[b]:
                     for s in range(1, self.n_rbc[r, b, c] + 1):
+                        if (r, b, c, s) not in self.S_rbc_s:
+                            continue
                         predecessors = self.S_rbc_s[(r, b, c, s)]
+                        # costruisci espressione usando solo le variabili esistenti
+                        expr = gb.quicksum(self.y_jrbc_s[j, r, b, c, s] 
+                                        for j in predecessors if (j,r,b,c,s) in self.y_jrbc_s)
+                        rhs = di.compute_l_rbc_s(self.S_rbc_s).get((r,b,c,s), 0) * self.y_rbc_s[r,b,c,s]
                         self.model.addConstr(
-                            gb.quicksum(self.y_jrbc_s[j, r, b, c, s] for j in predecessors if (j, r, b, c, s) in self.y_jrbc_s) == di.compute_l_rbc_s(self.S_rbc_s)[r, b, c, s] * self.y_rbc_s[r, b, c, s],
-                            name=f"Constraint_44_{r}_{b}_{c}_{s}"
-                        )
+                            expr == rhs, name=f"Constraint_44_{r}_{b}_{c}_{s}"
+                    )
 
         # Constraint (45)
         for t in self.TO:
@@ -770,30 +790,35 @@ class OptimizationInstance:
         for r in self.R:
             for j in self.pi_r[r]:
                 for c in self.C:
-                    if j in self.nc_jrc_max and r in self.nc_jrc_max[j] and c in self.nc_jrc_max[j][r]:
-                        # Log values before constraints
-                        #logging.debug(f"\nConstraint 61 for {j}, {r}, {c}:")
-                        #logging.debug(f"nc_jrc_max = {self.nc_jrc_max[j][r][c]}")
+                    # Check if all required keys exist
+                    if (j in self.nc_jrc_max and 
+                        r in self.nc_jrc_max[j] and 
+                        c in self.nc_jrc_max[j][r] and
+                        j in self.noc_jrc_ct and
+                        r in self.noc_jrc_ct[j] and 
+                        c in self.noc_jrc_ct[j][r]):
 
+                        # Add bounds constraints
                         self.model.addConstr(
                             self.nc_jrc_ct[j, r, c] >= 0,
                             name=f"Constraint_61_a_{j}_{r}_{c}"
                         )
+                        
                         self.model.addConstr(
                             self.nc_jrc_ct[j, r, c] <= self.nc_jrc_max[j][r][c],
                             name=f"Constraint_61_b_{j}_{r}_{c}"
                         )
 
-                        # Log the actual constraint
-                        #logging.debug(f"Added constraint: 0 <= nc_jrc_ct[{j},{r},{c}] <= {self.nc_jrc_max[j][r][c]}")
-
-                        # Check for potential conflict
+                        # Check for potential conflicts
                         if self.noc_jrc_ct[j][r][c] > self.nc_jrc_max[j][r][c]:
-                            logging.warning(
-                                f"CONFLICT DETECTED at {j}, {r}, {c}: "
-                                f"noc_jrc_ct ({self.noc_jrc_ct[j][r][c]}) > "
-                                f"nc_jrc_max ({self.nc_jrc_max[j][r][c]})"
-                            )
+                            print(f"[WARN] Conflict in Constraint 61 at (j={j}, r={r}, c={c}):")
+                            print(f"  noc_jrc_ct = {self.noc_jrc_ct[j][r][c]}")
+                            print(f"  nc_jrc_max = {self.nc_jrc_max[j][r][c]}")
+                    else:
+                        # Print debug info for missing data
+                        print(f"[DEBUG] Skipping Constraint 61 for (j={j}, r={r}, c={c}):")
+                        print(f"  nc_jrc_max keys exist: {j in self.nc_jrc_max and r in self.nc_jrc_max.get(j,{})}")
+                        print(f"  noc_jrc_ct keys exist: {j in self.noc_jrc_ct and r in self.noc_jrc_ct.get(j,{})}")
 
         # Constraint (62)
         for r in self.R:
@@ -844,40 +869,29 @@ class OptimizationInstance:
                                 )
 
             # Other constraints defined directly in variables (!?)
-    # Solving method
 
     def preprocessing(self):
-        # === PREPROCESS: disable infeasible routes wrt Constraint 29 ===
-        self.model.update()  # make sure variable attributes are available
-
+        """Preprocess routes based on minimum traffic interval requirements"""
+        self.model.update()
+        
         for r in self.R:
-            # compute maximum RHS possible for this route
-            nb_sum = 0
-            for b in self.B_r[r]:
-                for c in self.C_b[b]:
-                    val = self.nb_rbc[r, b, c]
-                    if isinstance(val, gb.Var):
-                        nb_sum += val.getAttr("UB")  # upper bound
-                    else:
-                        nb_sum += float(val)
-
-            nob_sum = sum(self.nob_rb.get(r, {}).get(b, 0) for b in self.B_r[r])
-
-            nv_sum = 0
-            for b in self.V_r[r]:
-                val = self.nv_rb[r, b]
-                if isinstance(val, gb.Var):
-                    nv_sum += val.getAttr("UB")
-                else:
-                    nv_sum += float(val)
-
-            rhs_val = self.lt_r[r] * (nb_sum + nob_sum + nv_sum)
-            lhs_val = self.L_r[r]
-
-            if lhs_val < rhs_val - 1e-6:  # margin to avoid floating point issues
-                # Disable this route
+            # Calculate maximum capacity for route
+            max_capacity = sum(
+                self.cap_b[b] * self.ub_rb[r][b] 
+                for b in self.B_r[r]
+            )
+            max_capacity += sum(
+                self.cap_b[b] * self.nv_rb_0[r][b]
+                for b in self.V_r[r]
+            )
+            
+            # Calculate minimum cycle time needed
+            min_cycle_time = self.dem_r[r] / max_capacity
+            
+            # If actual cycle time is less than needed, route is infeasible
+            if self.L_r[r] < min_cycle_time:
                 self.y_r[r].UB = 0
-                print(f"[PREPROCESS] Disabled route {r}: LHS={lhs_val} < RHS={rhs_val}")
+                print(f"[PREPROCESS] Disabled route {r}: Cycle time {self.L_r[r]} < Required {min_cycle_time}")
 
     def solve_algorithm(self):
         '''

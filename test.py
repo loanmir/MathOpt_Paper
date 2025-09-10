@@ -5,14 +5,16 @@ from instance import OptimizationInstance
 
 data_obj = data(
     n_types_chargers=3,
-    n_types_elec_buses=2,
-    n_types_non_battery_buses=1,
-    upper_limit_charging_points=10,
-    upper_limit_charging_plugs=20,
-    n_routes=3,
-    n_stops=3,
-    seed=43,
-    cc_ouc_pair_list=[(0, 1e8)]
+    n_types_elec_buses=10,
+    n_types_non_battery_buses=2,
+    upper_limit_charging_points=1500,
+    upper_limit_charging_plugs=1500,
+    n_routes=45,
+    n_stops=75,
+    seed=42,
+    cc_ouc_pair_list=[(4e7, 5e8)],
+    max_n_old_charging_devices_per_stop=20,
+    max_n_old_charging_plugs_per_stop=20,
 )
 
 instance1 = OptimizationInstance(data_obj)

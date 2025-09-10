@@ -39,8 +39,6 @@ class data:
         self.n_old_charging_devices_per_stop = max_n_old_charging_devices_per_stop  # Maximum  Number of old charging devices per stop
         self.n_old_non_battery_buses_per_route = max_n_old_non_battery_buses_per_route  # Maximum Number of old non-battery buses per route
         self.n_old_elec_buses_per_route = max_n_old_elec_buses_per_route  # Maximum Number of old electric buses per route
-        # self.lt_r_global = 2 # lower bound on traffic interval of route r
-        # self.ut_r_global = 20 # upper bound on traffic interval of route r
         self.G, self.coords = self.create_random_graph(n_depots=n_depots, n_stops=n_stops)  # Create the graph with nodes and edges
         self.R = self.create_R_set()  # Create the set of routes
         self.D = self.create_D_set()  # Create the set of depots
@@ -77,7 +75,7 @@ class data:
         self.up_j = self.create_up_j(upper_limit_charging_points)  # Define the upper limit for the number of charging points at stop j
         self.uc_c = self.create_uc_c(upper_limit_charging_plugs)  # Define the upper limit for the number of plug devices of c-type
         self.p_c = 260  # price of one c-type charging point
-        self.utp_t = 1300  # output power of a power station at spot t ∈ T
+        self.utp_t = 4000000  # output power of a power station at spot t ∈ T
         self.T_j = self.create_T_j()  # Create the mapping of feasible charging stops to their respective power station spots
         self.nv_rb_0 = self.create_nv_rb_0()  # Create the initial number of non-battery vehicles on route r
         self.nob_rb = self.create_nob_rb()  # Create the initial number of old electric buses on route r
@@ -124,7 +122,6 @@ class data:
         print("C_b:", self.C_b)
         print("B_r[r1]:", self.B_r[self.R[0]])
         print("n_rbc[r1, b, c]:",{(b, c): self.n_rbc.get((self.R[0], b, c), None) for b in self.B_r[self.R[0]] for c in self.C_b[b]})
-
 
     def create_graph(self):
         """
@@ -445,7 +442,7 @@ class data:
         Returns:
             dict: Dictionary mapping routes to bus types and their variable costs
         """
-        base_costs = [270000, 200000, 280000, 300000, 250000]
+        base_costs = [170000, 100000, 180000, 200000, 150000]
         vcb_rb = {}
         for r in self.R:
             vcb_rb[r] = {}
@@ -457,16 +454,32 @@ class data:
     def create_B_r(self):
         """
         Create a dictionary mapping routes to sets of electric bus types.
-        
-        Returns:
-            dict: Dictionary mapping each route to a list of electric bus types
+        Ensures that at least one old bus type is included in each route's bus set.
         """
-
         base_values = [r for r in range(1, len(self.B)+1)]
-
         B_r = {}
+
+        print("\nDebug B_r creation:")
+        
         for r in self.R:
-            B_r[r] = self.rng.sample(self.B, self.rng.choice(base_values))  # Assuming all routes have the same set of electric bus types
+            # Select random number of buses
+            n_buses = self.rng.choice(base_values)
+            
+            # Get random old bus type that must be included
+            required_old_bus = self.rng.choice(self.BO)
+            
+            # First add the required old bus
+            B_r[r] = [required_old_bus]
+            
+            # Then add remaining random buses until we reach n_buses
+            available_buses = [b for b in self.B if b != required_old_bus]
+            additional_buses = self.rng.sample(available_buses, min(n_buses-1, len(available_buses)))
+            B_r[r].extend(additional_buses)
+            
+            print(f"Route {r}:")
+            print(f"  Required old bus: {required_old_bus}")
+            print(f"  Total buses selected: {B_r[r]}")
+
         return B_r
     
     def create_BO_r(self):
@@ -577,7 +590,6 @@ class data:
         Returns:
             dict: Dictionary mapping number of Old c-type plug devices to stop j.
         """ 
-        base_values = [r for r in range(1, self.n_old_charging_plugs_per_stop + 1)]
 
         nod_jc = {
             (j, c): 0
@@ -588,7 +600,7 @@ class data:
         for node in self.G.nodes:
             for c in self.C:
                 if self.G.nodes[node].get("charging_possible", False):
-                    nod_jc[node, c] = self.rng.choice(base_values)
+                    nod_jc[node, c] = self.n_old_charging_plugs_per_stop
 
         return nod_jc  # number of old c-type plugs devices at stop j
 
@@ -597,8 +609,6 @@ class data:
         Returns:
             dict: Dictionary mapping number of old c-type charging points to stop j.
         """ 
-    
-        base_values = [r for r in range(1, self.n_old_charging_devices_per_stop + 1)]
 
         nop_jc = {
             (j, c): 0
@@ -606,12 +616,10 @@ class data:
             for c in self.C
         }
 
-        rng = random.Random(self.seed + 1) # different rng to have different coupling
-
         for node in self.G.nodes:
             for c in self.C:
                 if self.G.nodes[node].get("charging_possible", False):
-                    nop_jc[node, c] = rng.choice(base_values)  # number of old c-type charging devices at stop j
+                    nop_jc[node, c] = self.n_old_charging_devices_per_stop  # number of old c-type charging devices at stop j
 
         return nop_jc
 
@@ -751,7 +759,7 @@ class data:
         Returns:
             dict: Dictionary mapping each route to its lower traffic interval bound
         """
-        base_values = [5]
+        base_values = [20]
         lt_r = {r: self.rng.choice(base_values) for r in self.R}
 
         return lt_r
@@ -763,7 +771,7 @@ class data:
         Returns:
             dict: Dictionary mapping each route to its upper traffic interval bound
         """
-        ut_r = {r: self.lt_r[r]+10 for r in self.R}
+        ut_r = {r: self.lt_r[r]+20 for r in self.R}
         return ut_r
 
     '''
@@ -1037,47 +1045,62 @@ class data:
 
     def create_S_rbc_s(self):
         """
-        Create feasible charging scenarios for circular routes based on pre-calculated n_rbc values.
-        Each scenario contains one or two terminal stops based on n_rbc value.
+        Crea gli scenari di ricarica S_rbc_s per ogni combinazione (r,b,c)
+        in coerenza con n_rbc, assumendo rotte circolari.
+
+        Regole dal paper:
+        - n_rbc = 0 → nessuno scenario
+        - n_rbc = 1 → scenario con entrambi i terminali [T1(r), T2(r)]
+        - n_rbc = 2 → due scenari: uno con [T1(r)], uno con [T2(r)]
         """
+
         S_rbc_s = {}
-        
+
+        def get_terminals(route_stops, stop_distances):
+            """
+            Per rotte circolari:
+            - T1 = primo stop
+            - T2 = lo stop più lontano da T1 (a metà percorso circa)
+            """
+            t1 = route_stops[0]
+            cum_dist = 0
+            max_dist = -1
+            t2 = None
+
+            # percorri fino a tornare a t1
+            for i in range(1, len(route_stops)):
+                cum_dist += stop_distances[i-1]
+                if route_stops[i] == t1:
+                    break
+                if cum_dist > max_dist:
+                    max_dist = cum_dist
+                    t2 = route_stops[i]
+
+            return t1, t2
+
         for r in self.R:
             stops = self.pi_r[r]
-            T1 = stops[0]    # First stop (terminal 1)
-            
-            # For routes with only 2 unique stops
-            if len(stops) == 3:
-                T2 = stops[1]  # Second stop (terminal 2)
-            else:
-                # For longer routes, middle stop is terminal 2
-                T2 = stops[len(stops) // 2]
-                
+            dists = self.distance_r[r]
+            t1, t2 = get_terminals(stops, dists)
+
             for b in self.B_r[r]:
                 for c in self.C_b[b]:
                     n_scenarios = self.n_rbc.get((r, b, c), 0)
-                    
-                    # No scenarios needed
+
                     if n_scenarios == 0:
                         continue
-                        
-                    # Two single-terminal scenarios
-                    elif n_scenarios == 2:
-                        S_rbc_s[(r, b, c, 1)] = [T1]
-                        S_rbc_s[(r, b, c, 2)] = [T2]
-                        
-                    # One dual-terminal scenario
                     elif n_scenarios == 1:
-                        S_rbc_s[(r, b, c, 1)] = [T1, T2]
-        
-        # Debug print
-        print("\nGenerated Charging Scenarios:")
-        print("=" * 40)
-        for (r, b, c, s), stops in sorted(S_rbc_s.items()):
-            print(f"Route {r}, Bus {b}, Charger {c}, Scenario {s}: {stops}")
-        
-        return S_rbc_s
+                        S_rbc_s[(r, b, c, 1)] = [t1, t2]
+                    elif n_scenarios == 2:
+                        S_rbc_s[(r, b, c, 1)] = [t1]
+                        S_rbc_s[(r, b, c, 2)] = [t2]
+                    else:
+                        raise ValueError(f"Unexpected n_rbc={n_scenarios} for {(r,b,c)}")
 
+            # Debug: stampa i terminali trovati
+            print(f"Route {r}: T1={t1}, T2={t2}")
+
+        return S_rbc_s
 
 
     def create_n_rbc(self):
@@ -1132,65 +1155,60 @@ class data:
 
     def create_nc_jrc_max(self):
         """
-        Create nc_jrc_max dictionary: upper bound on plug devices
+        Create upper bounds on plug devices for each stop-route-charger combination.
         nc_jrc_max = ceil(max{ct_rjbc | b ∈ B_rc} / lt_r)
-        
-        This is similar to noc_jrc_ct but for ALL buses (not just old ones)
         """
         nc_jrc_max = {}
         
+        # Debug print
+        print("\nCalculating nc_jrc_max:")
+        
         for j in self.N:
-            if j in self.D:  # Skip depot stops  
+            if j in self.D:  # Skip depot stops
                 continue
                 
             nc_jrc_max[j] = {}
             
             for r in self.R:
-                if j not in self.pi_r[r]:  # Skip if stop j is not on route r
+                # Only process if stop j is in route r
+                if j not in self.pi_r[r]:
                     continue
                     
                 nc_jrc_max[j][r] = {}
+                print(f"\nStop {j}, Route {r}:")
                 
                 for c in self.C:
-                    # Get ALL bus types that can use charger c on route r
-                    all_bus_types = []
+                    # Get bus types that can use charger c on route r
+                    bus_types = []
                     if r in self.B_rc and c in self.B_rc[r]:
-                        all_bus_types.extend(self.B_rc[r][c])
-                    if r in self.BO_rc and c in self.BO_rc[r]:
-                        all_bus_types.extend(self.BO_rc[r][c])
+                        bus_types.extend(self.B_rc[r][c])
                     
-                    if not all_bus_types:
-                        nc_jrc_max[j][r][c] = 0
+                    if not bus_types:
+                        print(f"  Charger {c}: No compatible buses")
                         continue
                     
-                    # Find maximum charging time among ALL buses
+                    # Find maximum charging time
                     max_ct = 0
-                    for b in all_bus_types:
-                        if (r in self.ct_rjbc and 
-                            j in self.ct_rjbc[r] and 
-                            b in self.ct_rjbc[r][j] and 
-                            c in self.ct_rjbc[r][j][b]):
-                            
-                            ct_value = self.ct_rjbc[r][j][b][c]
-                            max_ct = max(max_ct, ct_value)
+                    for b in bus_types:
+                        if r in self.ct_rjbc and j in self.ct_rjbc[r] and b in self.ct_rjbc[r][j]:
+                            ct = self.ct_rjbc[r][j][b].get(c, 0)
+                            max_ct = max(max_ct, ct)
+                            print(f"  Bus {b}, Charger {c}: ct={ct}")
                     
                     # Calculate upper bound
                     if max_ct > 0 and self.lt_r[r] > 0:
                         nc_jrc_max[j][r][c] = math.ceil(max_ct / self.lt_r[r])
+                        print(f"  Final nc_jrc_max[{j}][{r}][{c}] = {nc_jrc_max[j][r][c]}")
                     else:
                         nc_jrc_max[j][r][c] = 0
-                        
-                    print(f"nc_jrc_max[{j}][{r}][{c}] = {nc_jrc_max[j][r][c]} "
-                        f"(max_ct={max_ct}, lt_r={self.lt_r[r]})")
+                        print(f"  Final nc_jrc_max[{j}][{r}][{c}] = 0 (no charging time or invalid lt_r)")
         
         return nc_jrc_max
 
     def create_noc_jrc_ct(self):
         """
-        Create noc_jrc_ct dictionary according to paper definition:
+        Create noc_jrc_ct dictionary for old charging devices.
         noc_jrc_ct = ceil(max{ct_rjbc | b ∈ BO_rc} / lt_r)
-        
-        Only for non-depot stops j ∈ N\D and routes with old electric buses
         """
         noc_jrc_ct = {}
         
@@ -1201,40 +1219,40 @@ class data:
             noc_jrc_ct[j] = {}
             
             for r in self.R:
-                if r not in self.R_jc.get((j,), {}) and j not in self.pi_r[r]:
-                    continue  # Skip if stop j is not on route r
+                # Only process if stop j is in route r
+                if j not in self.pi_r[r]:
+                    continue
                     
                 noc_jrc_ct[j][r] = {}
                 
                 for c in self.C:
-                    # Check if there are old buses of type c on route r
-                    if (r not in self.BO_rc or 
-                        c not in self.BO_rc[r] or 
-                        len(self.BO_rc[r][c]) == 0):
-                        continue
+                    # Get old bus types that can use charger c on route r
+                    old_bus_types = []
+                    if r in self.BO_rc and c in self.BO_rc[r]:
+                        old_bus_types = self.BO_rc[r][c]
                     
-                    # Get old bus types for this route-charger combination
-                    old_bus_types = self.BO_rc[r][c]
+                    if not old_bus_types:
+                        continue
                     
                     # Find maximum charging time among old buses
                     max_ct = 0
                     for b in old_bus_types:
-                        if (r in self.ct_rjbc and 
-                            j in self.ct_rjbc[r] and 
-                            b in self.ct_rjbc[r][j] and 
-                            c in self.ct_rjbc[r][j][b]):
-                            
-                            ct_value = self.ct_rjbc[r][j][b][c]
-                            max_ct = max(max_ct, ct_value)
+                        if r in self.ct_rjbc and j in self.ct_rjbc[r] and b in self.ct_rjbc[r][j]:
+                            ct = self.ct_rjbc[r][j][b].get(c, 0)
+                            max_ct = max(max_ct, ct)
                     
-                    # Calculate noc_jrc_ct according to paper formula
+                    # Calculate noc_jrc_ct value
                     if max_ct > 0 and self.lt_r[r] > 0:
                         noc_jrc_ct[j][r][c] = math.ceil(max_ct / self.lt_r[r])
+                        print(f"noc_jrc_ct[{j}][{r}][{c}] = {noc_jrc_ct[j][r][c]} (max_ct={max_ct}, lt_r={self.lt_r[r]})")
                     else:
-                        noc_jrc_ct[j][r][c] = 0
-                    
-                    print(f"noc_jrc_ct[{j}][{r}][{c}] = {noc_jrc_ct[j][r][c]} "
-                        f"(max_ct={max_ct}, lt_r={self.lt_r[r]})")
+                        continue  # Skip if no valid charging time or traffic interval
+        
+        # Print summary
+        for j in noc_jrc_ct:
+            print(f"\n'{j}' =")
+            print(noc_jrc_ct[j])
+        print(f"len() =\n{len(noc_jrc_ct)}")
         
         return noc_jrc_ct
 
