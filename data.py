@@ -837,11 +837,14 @@ class data:
             # Randomly decide route length
             route_type = self.rng.random()
             if route_type < 0.6:    # 60% short routes (2-3 stops)
-                n_stops = self.rng.randint(2, 3)
+                n_stops = max(2, self.rng.randint(int(0.15 * len(self.N)), 
+                                        int(0.25 * len(self.N))))
             elif route_type < 0.9:  # 30% medium routes (4-6 stops)
-                n_stops = self.rng.randint(3, 4)
+                n_stops = max(3, self.rng.randint(int(0.30 * len(self.N)), 
+                                        int(0.40 * len(self.N))))
             else:                   # 10% long routes (7-9 stops)
-                n_stops = self.rng.randint(4, 5)
+                n_stops = max(4, self.rng.randint(int(0.45 * len(self.N)), 
+                                        int(0.55 * len(self.N))))
             
             route = [start_stop]
             visited = {start_stop}
