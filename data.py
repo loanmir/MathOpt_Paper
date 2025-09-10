@@ -340,29 +340,26 @@ class data:
 
     def create_capacities(self):
         """
-        Create a list of capacities that repeats the base values until reaching target_length.
-        
-        Args:
-            target_length (int): Desired length of the capacities list
+        Create a list of random capacities between 40 and 80 for each bus type.
         
         Returns:
-            list: List of capacities repeated to match target_length
+            list: List of random capacities for electric and non-battery buses
         """
         target_length = self.n_types_elec_buses + self.n_types_non_battery_buses
-
-        # Base capacities for electric and non-battery vehicles
-        base_capacities = [120, 137, 125, 150, 110]
         
-        # Calculate how many complete repetitions we need
-        repetitions = target_length // len(base_capacities)
-        remainder = target_length % len(base_capacities)
+        # Generate random capacities between 40 and 80
+        capacities = [
+            self.rng.randint(40, 80) 
+            for _ in range(target_length)
+        ]
         
-        # Create the repeated list
-        capacities = base_capacities * repetitions
-        # Add the remaining elements if any
-        capacities.extend(base_capacities[:remainder])
+        print("\nBus Capacities:")
+        print("===============")
+        for i, cap in enumerate(capacities):
+            bus_type = "Electric" if i < self.n_types_elec_buses else "Non-battery"
+            print(f"Bus {i+1} ({bus_type}): {cap} passengers")
         
-        return capacities 
+        return capacities
 
     def create_cap_b(self, capacities):
         """
@@ -686,7 +683,7 @@ class data:
             dict: Dictionary mapping each route to a dictionary of old electric bus types and their counts
         """
         if self.n_old_elec_buses_per_route > 0:
-            base_values = [r for r in range(0, self.n_old_elec_buses_per_route + 1)]
+            base_values = [r for r in range(1, self.n_old_elec_buses_per_route + 1)]
         else:
             base_values = [0]
 
@@ -759,7 +756,7 @@ class data:
         Returns:
             dict: Dictionary mapping each route to its lower traffic interval bound
         """
-        base_values = [20]
+        base_values = [10]
         lt_r = {r: self.rng.choice(base_values) for r in self.R}
 
         return lt_r
@@ -771,7 +768,7 @@ class data:
         Returns:
             dict: Dictionary mapping each route to its upper traffic interval bound
         """
-        ut_r = {r: self.lt_r[r]+20 for r in self.R}
+        ut_r = {r: self.lt_r[r]+10 for r in self.R}
         return ut_r
 
     '''

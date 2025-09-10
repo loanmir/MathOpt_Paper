@@ -57,6 +57,7 @@ class OptimizationInstance:
         self.C_b = self.data.C_b
         self.B_rc = self.data.B_rc
         self.BO_rc = self.data.BO_rc
+        self.BO_r = self.data.BO_r
         self.co_b = self.data.co_b
         self.nod_jc = self.data.nod_jc
         self.nop_jc = self.data.nop_jc
