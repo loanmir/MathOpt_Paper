@@ -21,7 +21,7 @@ class data:
                 upper_limit_charging_points=5, 
                 upper_limit_charging_plugs=15, 
                 seed=42, 
-                n_old_elec_buses=2,
+                n_types_old_elec_buses=2,
                 max_n_old_charging_plugs_per_stop=2,
                 max_n_old_charging_devices_per_stop=3,
                 max_n_old_non_battery_buses_per_route=4,
@@ -32,7 +32,7 @@ class data:
         self.n_types_chargers = n_types_chargers
         self.n_types_elec_buses = n_types_elec_buses
         self.n_types_non_battery_buses = n_types_non_battery_buses
-        self.n_types_old_elec_buses = n_old_elec_buses
+        self.n_types_old_elec_buses = n_types_old_elec_buses
         self.n_routes = n_routes
         self.seed = seed
         self.n_old_charging_plugs_per_stop = max_n_old_charging_plugs_per_stop  # Maximum Number of old charging plugs per stop
@@ -75,7 +75,7 @@ class data:
         self.up_j = self.create_up_j(upper_limit_charging_points)  # Define the upper limit for the number of charging points at stop j
         self.uc_c = self.create_uc_c(upper_limit_charging_plugs)  # Define the upper limit for the number of plug devices of c-type
         self.p_c = 260  # price of one c-type charging point
-        self.utp_t = 4000000  # output power of a power station at spot t ∈ T
+        self.utp_t = 40000  # output power of a power station at spot t ∈ T
         self.T_j = self.create_T_j()  # Create the mapping of feasible charging stops to their respective power station spots
         self.nv_rb_0 = self.create_nv_rb_0()  # Create the initial number of non-battery vehicles on route r
         self.nob_rb = self.create_nob_rb()  # Create the initial number of old electric buses on route r

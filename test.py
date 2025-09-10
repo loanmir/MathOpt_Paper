@@ -4,19 +4,21 @@ from instance import OptimizationInstance
 
 
 data_obj = data(
-    n_types_chargers=3,
+    n_types_chargers=4,
     n_types_elec_buses=10,
-    n_types_non_battery_buses=2,
+    n_types_non_battery_buses=3,
     upper_limit_charging_points=150,
     upper_limit_charging_plugs=150,
-    n_routes=25,
-    n_stops=26,
-    seed=42,
-    cc_ouc_pair_list=[(2e7, 2e8)],
-    max_n_old_charging_devices_per_stop=20,
-    max_n_old_charging_plugs_per_stop=20,
-    max_n_old_elec_buses_per_route=1,
-    n_old_elec_buses=3
+    n_routes=50,
+    n_stops=70,
+    seed=41,
+    cc_ouc_pair_list=[(44e6, 1e8)],
+    max_n_old_charging_devices_per_stop=3,
+    max_n_old_charging_plugs_per_stop=3,
+    max_n_old_elec_buses_per_route=2,
+    max_n_old_non_battery_buses_per_route=2,
+    n_types_old_elec_buses=2,
+    n_depots=3
 )
 
 instance1 = OptimizationInstance(data_obj)
@@ -143,9 +145,77 @@ def print_total_bus_counts(model_algorithm, instance):
     
     print(f"\nTotal Fleet Size: {int(total_new + total_non + total_old)} units")
 
+def print_capital_costs(model_algorithm, instance):
+    """
+    Print detailed breakdown of capital costs including:
+    - New charging infrastructure costs (stations and plugs)
+    - New electric bus fleet costs
+    - New non-battery bus fleet costs
+    """
+    print("\nCapital Costs Analysis:")
+    print("=" * 50)
+    
+    # Calculate costs by category
+    costs = {
+        'charging_stations': {},
+        'charging_plugs': {},
+        'electric_buses': {},
+    }
+    
+    # Charging station costs by location
+    for j in instance.N:
+        if instance.ns_j[j].X > 0:
+            costs['charging_stations'][j] = instance.csta_j[j] * instance.ns_j[j].X
+            
+    # Charging plug costs by type
+    for j in instance.N:
+        for c in instance.C:
+            if instance.np_jc[j,c].X > 0:
+                cost = instance.ccp_c[c] * instance.np_jc[j,c].X
+                costs['charging_plugs'][c] = costs['charging_plugs'].get(c, 0) + cost
+    
+    # Electric bus costs by type
+    for r in instance.R:
+        for b in instance.B_r[r]:
+            for c in instance.C_b[b]:
+                if (r,b,c) in instance.nb_rbc and instance.nb_rbc[r,b,c].X > 0:
+                    cost = instance.cbus_b[b] * instance.nb_rbc[r,b,c].X
+                    costs['electric_buses'][b] = costs['electric_buses'].get(b, 0) + cost
+
+    # Print detailed breakdown
+    print("\n1. Charging Infrastructure:")
+    print("-" * 30)
+    print("\na) Charging Stations:")
+    total_stations = sum(costs['charging_stations'].values())
+    for j, cost in costs['charging_stations'].items():
+        print(f"Location {j}: ${cost:,.2f}")
+    print(f"Subtotal Stations: ${total_stations:,.2f}")
+    
+    print("\nb) Charging Plugs:")
+    total_plugs = sum(costs['charging_plugs'].values())
+    for c, cost in costs['charging_plugs'].items():
+        print(f"Type {c}: ${cost:,.2f}")
+    print(f"Subtotal Plugs: ${total_plugs:,.2f}")
+    
+    print(f"\nTotal Charging Infrastructure: ${(total_stations + total_plugs):,.2f}")
+
+    print("\n2. Electric Bus Fleet:")
+    print("-" * 30)
+    total_electric = sum(costs['electric_buses'].values())
+    for b_type, cost in costs['electric_buses'].items():
+        print(f"Type {b_type}: ${cost:,.2f}")
+    print(f"Subtotal: ${total_electric:,.2f}")
+
+    # Print grand total
+    total = total_stations + total_plugs + total_electric
+    print("\nTotal Capital Investment:")
+    print("=" * 30)
+    print(f"${total:,.2f}")
+
 # Print results
 solve_and_print_details(model_algorithm, "Algorithm")
 
 if model_algorithm.status == gb.GRB.OPTIMAL:
     # print_route_bus_types(model_algorithm, instance1)
     print_total_bus_counts(model_algorithm, instance1)
+    print_capital_costs(model_algorithm, instance1)  # Add this line
