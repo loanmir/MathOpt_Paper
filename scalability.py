@@ -1,6 +1,7 @@
 import gurobipy as gb
 from data import data
 from instance import OptimizationInstance
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -12,13 +13,24 @@ def solve_and_get_details(model, name, size_label):
         "status": None,
         "obj": None,
         "runtime": None,
+        "nodes": None,
+        "n_vars": None,
+        "n_constraints": None,
+        "n_nonzero": None,
+        "gap": None,
     }
 
     if model.status == gb.GRB.OPTIMAL:
         result["status"] = "OPTIMAL"
         result["obj"] = model.ObjVal
         result["runtime"] = model.Runtime
-    else:
+        result["nodes"] = model.NodeCount
+        result["n_vars"] = model.NumVars
+        result["n_constraints"] = model.NumConstrs
+        result["n_nonzeros"] = model.NumNZs
+        result["gap"] = model.MIPGap
+
+    elif model.Status == gb.GRB.INFEASIBLE:
         result["status"] = "INFEASIBLE"
         model.computeIIS()
         print(f"\n{name} with {size_label}: INFEASIBLE")
@@ -26,6 +38,9 @@ def solve_and_get_details(model, name, size_label):
         for c in model.getConstrs():
             if c.IISConstr:
                 print(f" - {c.ConstrName}")
+    else:
+        result["status"] = str(model.Status)
+
     return result
 
 
@@ -144,10 +159,97 @@ def plot_scalability_results(results, cc_values):
         # Fixed format specifier - separate the float format from the alignment
         print(f"{i:^10} {cc:^15.0f} {obj:>20} {runtime:>15} {res['status']:^15}")
 
+def plot_scalability_multi(results, cc_values):
+    instance_numbers = range(1, len(results) + 1)
+
+    # Extract metrics
+    runtimes = [res['runtime'] if res['status'] == 'OPTIMAL' else np.nan for res in results]
+    nodes = [res['nodes'] if res['status'] == 'OPTIMAL' else np.nan for res in results]
+    n_vars = [res['n_vars'] for res in results]
+    n_cons = [res['n_constraints'] for res in results]
+    objectives = [res['obj'] if res['status'] == 'OPTIMAL' else np.nan for res in results]
+    efficiency = [obj / cc if obj and cc else np.nan for obj, cc in zip(objectives, cc_values)]
+
+    x_labels = [f"{i}\n(cc={cc:.0f}M)" for i, cc in zip(instance_numbers, cc_values)]
+
+    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+    axes = axes.flatten()
+
+    # Runtime
+    axes[0].plot(instance_numbers, runtimes, marker="o", label="Runtime (s)")
+    axes[0].set_ylabel("Runtime (s)")
+    axes[0].grid(True, linestyle="--", alpha=0.6)
+    axes[0].legend()
+
+    # Nodes
+    axes[1].plot(instance_numbers, nodes, marker="s", color="orange", label="Nodes")
+    axes[1].set_ylabel("Nodes Explored")
+    axes[1].grid(True, linestyle="--", alpha=0.6)
+    axes[1].legend()
+
+    # Problem size (vars vs cons)
+    axes[2].plot(instance_numbers, n_vars, marker="o", label="Variables")
+    axes[2].plot(instance_numbers, n_cons, marker="s", label="Constraints")
+    axes[2].set_ylabel("Model Size")
+    axes[2].grid(True, linestyle="--", alpha=0.6)
+    axes[2].legend()
+
+    # Efficiency (objective ÷ cc)
+    axes[3].plot(instance_numbers, efficiency, marker="^", color="green", label="Obj/CapitalCost")
+    axes[3].set_ylabel("Efficiency (Obj ÷ CC)")
+    axes[3].grid(True, linestyle="--", alpha=0.6)
+    axes[3].legend()
+
+    for ax in axes:
+        ax.set_xticks(instance_numbers)
+        ax.set_xticklabels(x_labels, rotation=45, ha="right")
+
+    fig.suptitle("Scalability Analysis Across Problem Instances", fontsize=14, y=0.95)
+    plt.tight_layout()
+    plt.savefig("scalability_multi.png", dpi=300, bbox_inches="tight")
+    plt.show()
+
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+import numpy as np
+
+def plot_scalability_3d(results, cc_values):
+    """3D plots for scalability analysis."""
+    instance_numbers = range(1, len(results) + 1)
+
+    runtimes = [res["runtime"] if res["status"] == "OPTIMAL" else np.nan for res in results]
+    objectives = [res["obj"] if res["status"] == "OPTIMAL" else np.nan for res in results]
+    n_vars = [res.get("n_vars", np.nan) for res in results]
+    n_cons = [res.get("n_constraints", np.nan) for res in results]
+
+    # 1️⃣ Runtime vs Vars vs Constraints
+    fig = plt.figure(figsize=(14, 6))
+    ax = fig.add_subplot(121, projection="3d")
+    ax.scatter(n_vars, n_cons, runtimes, c="blue", marker="o", s=50)
+    ax.set_xlabel("Variables")
+    ax.set_ylabel("Constraints")
+    ax.set_zlabel("Runtime (s)")
+    ax.set_title("Runtime vs Problem Size (Vars & Constraints)")
+
+    # 2️⃣ Objective vs Capital Cost vs Runtime
+    ax2 = fig.add_subplot(122, projection="3d")
+    ax2.scatter(cc_values, runtimes, objectives, c="green", marker="^", s=50)
+    ax2.set_xlabel("Capital Cost (M)")
+    ax2.set_ylabel("Runtime (s)")
+    ax2.set_zlabel("Objective Value")
+    ax2.set_title("Objective vs Capital Cost vs Runtime")
+
+    plt.tight_layout()
+    plt.savefig("scalability_3d.png", dpi=300, bbox_inches="tight")
+    plt.show()
+
+
 if __name__ == "__main__":
     # Run scalability analysis and plot results
     results, cc_values = run_scalability()
     plot_scalability_results(results, cc_values)
+    plot_scalability_multi(results, cc_values)
+    plot_scalability_3d(results, cc_values)
 
 
 

@@ -501,16 +501,7 @@ class OptimizationInstance:
                 name=f"Constraint_29_{r}"
             )
 
-            # Log values before constraint
-            #logging.debug(f"\nConstraint 29 for {r}]:")
-            #logging.debug(f"y_r = {self.y_r[r]}")
-            '''
-            self.model.addConstr(self.L_r[r] * self.y_r[r] >= self.lt_r[r] * (
-                gb.quicksum(gb.quicksum(self.nb_rbc[r, b, c] + self.nob_rb.get(r, {}).get(b, 0)
-                for c in self.C_b[b]) for b in self.B_r[r]) + gb.quicksum(self.nv_rb[r, b] for b in self.V_r[r])),
-                name=f"Constraint_29_{r}"
-            )
-            '''
+
 
         # Constraint (30)
         for j in (j for j in self.D if j not in self.NO):
@@ -519,16 +510,7 @@ class OptimizationInstance:
                     self.uc_c[c] * self.alpha_jc[j, c] - self.nc_jc[j, c] <= 0,
                     name=f"Constraint_30_{j}_{c}"
                 )
-        '''
-        # Constraint (31)
-        for j in (j for j in self.N if j not in self.D):
-            for c in self.C:
-                print(f"DEBUG Stop7: route={r}, c={c}, y_rbc keys={[(rr, bb, cc) for (rr, bb, cc) in self.y_rbc.keys() if cc == 'c1']}")
-                self.model.addConstr(
-                    self.nc_jc[j, c] == gb.quicksum(self.nc_jrc[j, r, c] - self.nod_jc[j, c] for r in self.R_jc.get((j, c), []) if (j, r, c) in self.nc_jrc),
-                    name=f"Constraint_31_{j}_{c}"
-                )
-        '''
+
         # Constraint (31)
         lhs_terms = [(j, r, c) for r in self.R_jc.get((j, c), []) if (j, r, c) in self.nc_jrc]
 
@@ -542,19 +524,7 @@ class OptimizationInstance:
         else:
             print(f"[WARN C31] Stop {j}, charger {c}: no feasible (j,r,c). Skipping.")
 
-        '''
-        # Constraint (32)
-        for j in (j for j in self.N if j not in self.D):
-            for c in self.C:
-                for r in self.R_jc.get((j, c), []):
-                    print(f"DEBUG Stop7: route={r}, c={c}, y_rbc keys={[(rr, bb, cc) for (rr, bb, cc) in self.y_rbc.keys() if cc == 'c1']}")
-                    if (j, r, c) in self.nc_jrc:
-                        self.model.addConstr(self.nc_jrc_b[j, r, c] ==
-                            gb.quicksum(self.nb_rbc[r, b, c] + self.nob_rbc.get(r, {}).get(b, {}).get(c, 0)
-                            for b in self.B_rc[r][c]),
-                            name=f"Constraint_32_{j}_{r}_{c}"
-                    )
-        '''
+
         # Constraint (32)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
@@ -585,18 +555,7 @@ class OptimizationInstance:
                             self.nc_jrc[j, r, c] <= self.nc_jrc_ct[j, r, c],
                             name=f"Constraint_33_{j}_{r}_{c}"
                     )
-        '''
-        # Constraint (34)
-        for j in (j for j in self.N if j not in self.D):
-            for c in self.C:
-                for r in self.R_jc.get((j, c), []):
-                    print(f"DEBUG Stop7: route={r}, c={c}, y_rbc keys={[(rr, bb, cc) for (rr, bb, cc) in self.y_rbc.keys() if cc == 'c1']}")
-                    if (j, r, c) in self.nc_jrc:
-                        self.model.addConstr(
-                            self.nc_jrc[j, r, c] <= self.nc_jrc_b[j, r, c],
-                            name=f"Constraint_34_{j}_{r}_{c}"
-                    )
-        '''
+
         # Constraint (34)
         for j in (j for j in self.N if j not in self.D):
             for c in self.C:
@@ -882,7 +841,7 @@ class OptimizationInstance:
                                     name=f"Constraint_65_jrbc_zero_r{r}_b{b}_c{c}_j{j}_s{s}"
                                 )
 
-            # Other constraints defined directly in variables (!?)
+
 
     def preprocessing(self):
         """Preprocess routes based on minimum traffic interval requirements"""
@@ -971,6 +930,3 @@ class OptimizationInstance:
 
     def solve_heuristic_HRBC(self):
         pass
-
-    def get_solution_values(self):
-        return {v.VarName: v.X for v in self.model.getVars()}

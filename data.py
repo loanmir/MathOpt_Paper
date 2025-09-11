@@ -123,102 +123,6 @@ class data:
         print("B_r[r1]:", self.B_r[self.R[0]])
         print("n_rbc[r1, b, c]:",{(b, c): self.n_rbc.get((self.R[0], b, c), None) for b in self.B_r[self.R[0]] for c in self.C_b[b]})
 
-    def create_graph(self):
-        """
-        Create a graph with nodes and edges representing depots and stops.
-        Each node has attributes indicating its type and whether charging is possible.
-        """
-        G = nx.Graph()
-        G.add_node("Depot1", type="depot", charging_possible=True)
-        G.add_node("Depot2", type="depot", charging_possible=True)
-        G.add_node("Stop1", type="stop", charging_possible=True)
-        G.add_node("Stop2", type="stop", charging_possible=True)
-        G.add_node("Stop3", type="stop", charging_possible=False)
-        #G.add_node("Stop4", type="stop", charging_possible=False)
-        G.add_node("Stop5", type="stop", charging_possible=True)
-        G.add_node("Stop6", type="stop", charging_possible=True)
-        G.add_node("Stop7", type="stop", charging_possible=True)
-        G.add_node("Stop8", type="stop", charging_possible=True)
-        G.add_node("Stop9", type="stop", charging_possible=True)
-        G.add_node("Stop10", type="stop", charging_possible=True)
-        G.add_node("Stop11", type="stop", charging_possible=True)
-        G.add_node("Stop12", type="stop", charging_possible=True)
-        G.add_node("Stop13", type="stop", charging_possible=True)
-        G.add_node("Stop14", type="stop", charging_possible=True)
-        G.add_node("Stop15", type="stop", charging_possible=True)
-        G.add_node("Stop16", type="stop", charging_possible=True)
-        G.add_node("Stop17", type="stop", charging_possible=True)
-        G.add_node("Stop18", type="stop", charging_possible=True)
-        G.add_node("Stop19", type="stop", charging_possible=True)
-        G.add_node("Stop20", type="stop", charging_possible=True)
-        #G.add_node("Stop21", type="stop", charging_possible=False)
-        G.add_node("Stop22", type="stop", charging_possible=True)
-        G.add_node("Stop23", type="stop", charging_possible=True)
-        #G.add_node("Stop24", type="stop", charging_possible=False)
-        #G.add_node("Stop25", type="stop", charging_possible=False)
-        #G.add_node("Stop26", type="stop", charging_possible=False)
-
-        G.add_edge("Depot1", "Stop1", distance=3)
-        G.add_edge("Depot1", "Stop12", distance=2)
-        G.add_edge("Depot1", "Stop10", distance=3)
-        G.add_edge("Depot1", "Stop9", distance=2)
-        G.add_edge("Depot1", "Stop14", distance=4)
-        G.add_edge("Depot1", "Stop15", distance=4)
-
-        G.add_edge("Depot2", "Stop10", distance=3)
-        G.add_edge("Depot2", "Stop14", distance=3)
-        G.add_edge("Depot2", "Stop15", distance=6)
-        G.add_edge("Depot2", "Stop18", distance=4)
-        G.add_edge("Depot2", "Stop22", distance=2)
-        G.add_edge("Depot2", "Stop1", distance=3)
-
-        # Edges between the stops
-
-        G.add_edge("Stop1", "Stop8", distance=5)
-        G.add_edge("Stop1", "Stop2", distance=9)
-        G.add_edge("Stop1", "Stop5", distance=5)
-        G.add_edge("Stop1", "Stop7", distance=11)
-
-        G.add_edge("Stop2", "Stop23", distance=6)
-        G.add_edge("Stop2", "Stop3", distance=4)
-        G.add_edge("Stop2", "Stop15", distance=10)
-        G.add_edge("Stop2", "Stop18", distance=18)
-        G.add_edge("Stop2", "Stop20", distance=2)
-
-        #G.add_edge("Stop3", "Stop4", distance=6)
-
-        G.add_edge("Stop5", "Stop6", distance=4)
-
-        G.add_edge("Stop6", "Stop7", distance=4)
-
-        G.add_edge("Stop8", "Stop9", distance=4)
-
-        G.add_edge("Stop9", "Stop10", distance=5)
-
-        G.add_edge("Stop10", "Stop11", distance=13)
-        G.add_edge("Stop10", "Stop7", distance=9)
-        G.add_edge("Stop10", "Stop16", distance=14)
-
-        G.add_edge("Stop11", "Stop14", distance=9)
-
-        G.add_edge("Stop12", "Stop13", distance=13)
-
-        G.add_edge("Stop13", "Stop14", distance=7)
-
-        G.add_edge("Stop14", "Stop17", distance=14)
-        G.add_edge("Stop14", "Stop16", distance=15)
-        G.add_edge("Stop14", "Stop15", distance=8)
-
-        G.add_edge("Stop15", "Stop22", distance=6)
-
-        G.add_edge("Stop16", "Stop18", distance=21)
-
-        G.add_edge("Stop18", "Stop19", distance=12)
-
-        # G.add_edge("Stop20", "Stop21", distance=6)
-
-        return G
-
     # PARAMETERS
     def create_R_set(self):
         """
@@ -713,12 +617,7 @@ class data:
         Returns:
             dict: Dictionary mapping each route to a dictionary of old electric bus types and their counts at charging points
         """
-        #base_values = [r for r in range(1, self.n_old_non_battery_buses_per_route + 1)]
 
-        #nob_rbc = {
-        #    r: {"E401": {"c1": 2}} for r in self.R
-        #       ......    "c2": 2
-        #}
 
         tmp = copy.deepcopy(self.nob_rb)
 
