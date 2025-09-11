@@ -2,27 +2,6 @@ import gurobipy as gb
 from data import data
 from instance import OptimizationInstance
 
-# Random creation of the bus, routes, and chargers sets (Just for storing it somewhere)
-'''
-# B_r: Electric bus types available per route r
-B_r = {
-    r: random.sample(list(B.keys()), k=random.randint(2, len(B)))  # select 2 to all bus types randomly
-    for r in R
-}
-
-# V_r: Non-battery vehicle types available per route r
-V_r = {
-    r: random.sample(list(V.keys()), k=random.randint(1, len(V)))  # select 1 to all non-battery types randomly
-    for r in R
-}
-
-# B_rc: For each route r and charging type c, assign a subset of B_r[r]
-B_rc = {
-    (r, c): random.sample(B_r[r], k=random.randint(1, len(B_r[r])))
-    for r in R
-    for c in C
-}
-'''
 
 def solve_and_get_details(model, name, size_label):
     """Solve the model and return details in a dict"""
@@ -50,28 +29,37 @@ def solve_and_get_details(model, name, size_label):
 
 
 
-def run_scalability(scaling_steps=4):
+def run_scalability(n_istances=40, scaling_steps=2):
     """
         Run experiments with increasing problem sizes.
         scaling_steps: number of scaled instances to test
     """
     results = []
 
-    for step in range(1, scaling_steps + 1):
+    for i in range(1, n_istances + 1):
+        current_increase = i * scaling_steps
         # Scale problem size (increase bus/charger counts etc.)
         data_obj = data(
-            n_types_chargers=4,
-            n_types_elec_buses= 10 + ((step-1) * 3),
-            n_types_non_battery_buses= 3 + ((step-1)*0),
-            up_j_value=10,
-            uc_c_value=15,
+            n_types_chargers=1,
+            n_types_elec_buses=10+current_increase,
+            n_types_non_battery_buses=3,
+            upper_limit_charging_points=150,
+            upper_limit_charging_plugs=150,
+            n_routes=10+current_increase,
+            n_stops=10+current_increase,
+            seed=41,
+            cc_ouc_pair_list=[((20+current_increase)*1e6, (10+current_increase)*1e6)],
+            max_n_old_charging_devices_per_stop=3,
+            max_n_old_charging_plugs_per_stop=3,
+            max_n_old_elec_buses_per_route=2,
+            max_n_old_non_battery_buses_per_route=2,
+            n_types_old_elec_buses=2,
+            n_depots=2
         )
-        size_label = f"Scale-{step}"
+        size_label = f"Scale-{current_increase}"
 
         # Creating optimization instances
         instance_algorithm = OptimizationInstance(data_obj)
-        #instance_HR = OptimizationInstance(data_obj)
-        #instance_HRBC = OptimizationInstance(data_obj)
 
         # Set parameters for fair comparison
         for inst in [instance_algorithm]:            # instance_HR, instance_HRBC -> this need to be added
@@ -80,16 +68,11 @@ def run_scalability(scaling_steps=4):
             inst.model.setParam("IntFeasTol", 1e-9)
             inst.model.setParam("FeasibilityTol", 1e-9)
 
-
         # Solving each problem variant
         model_algorithm = instance_algorithm.solve_algorithm()
-        #model_HR = instance_HR.solve_heuristic_HR()
-        #model_HRBC = instance_HRBC.solve_heuristic_HRBC()
 
         # Collect results
         results.append(solve_and_get_details(model_algorithm, "Algorithm", size_label))
-        #results.append(solve_and_get_details(model_HR, "HR Heuristic", size_label))
-        #results.append(solve_and_get_details(model_HRBC, "HRBC Heuristic", size_label))
 
     return results
 

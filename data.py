@@ -441,19 +441,27 @@ class data:
     def create_vcb_rb(self):
         """
         Create a dictionary mapping routes to bus types and their variable costs.
+        Assigns random costs between 100,000 and 200,000 for each route-bus combination.
         
         Returns:
             dict: Dictionary mapping routes to bus types and their variable costs
         """
-        base_costs = [170000, 100000, 180000, 200000, 150000]
         vcb_rb = {}
         for r in self.R:
             vcb_rb[r] = {}
-            for i, bus in enumerate(self.B):
-                # Use modulo to cycle through base_costs
-                vcb_rb[r][bus] = self.rng.choice(base_costs)
-        return vcb_rb # Variable costs of b_bus_types-type electric bus on route r
-
+            for bus in self.B:
+                vcb_rb[r][bus] = self.rng.randint(100000, 200000)
+                
+        # Print the generated costs for verification
+        print("\nVariable Operation Costs (vcb_rb):")
+        print("=================================")
+        for r in sorted(self.R):
+            print(f"\nRoute {r}:")
+            for bus in sorted(vcb_rb[r].keys()):
+                print(f"  Bus {bus}: €{vcb_rb[r][bus]:,}")
+                
+        return vcb_rb
+    
     def create_B_r(self):
         """
         Create a dictionary mapping routes to sets of electric bus types.
@@ -1337,8 +1345,8 @@ class data:
         # Place stops in a wider area
         for i in range(n_stops):
             while True:
-                x = random.uniform(0, 100)
-                y = random.uniform(0, 100)
+                x = random.uniform(0, 200)
+                y = random.uniform(0, 200)
                 # Check minimum distance from other nodes
                 too_close = False
                 for existing_coord in coords.values():
@@ -1398,7 +1406,7 @@ class data:
                     # Random distance between 8 and 35
                     G.add_edge(best_edge[0], best_edge[1], distance=random.randint(8, 35))
 
-        self.visualize_graph(G, coords)
+        # self.visualize_graph(G, coords)
         return G, coords
 
     # Example usage:
