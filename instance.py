@@ -908,54 +908,59 @@ class OptimizationInstance:
                 print(f"[PREPROCESS] Disabled route {r}: Cycle time {self.L_r[r]} < Required {min_cycle_time}")
 
     def solve_algorithm(self):
-        '''
-        self.model.update()
-        # === DEBUG CHECK for r2 ===
-        r = "r2"
-        rhs_val = 0
-
-        # nb_rbc terms
-        nb_sum = 0
-        for b in self.B_r[r]:
-            for c in self.C_b[b]:
-                val = self.nb_rbc[r, b, c]
-                if isinstance(val, gb.Var):
-                    nb_sum += val.getAttr("UB")  # use upper bound
+        """
+        Solve the optimization model with automatic seed adjustment and data regeneration.
+        Returns:
+            Model: The solved Gurobi model
+        """
+        max_attempts = 5  # Maximum number of attempts
+        current_attempt = 0
+        
+        while current_attempt < max_attempts:
+            try:
+                self.model.optimize()
+                
+                if self.model.status == gb.GRB.OPTIMAL:
+                    print(f"\nOptimal solution found with seed {self.data.seed}")
+                    return self.model
+                    
+                elif self.model.status == gb.GRB.INFEASIBLE:
+                    current_attempt += 1
+                    new_seed = self.data.seed + 1
+                    print(f"\nModel infeasible with seed {self.data.seed}. Trying new seed {new_seed}...")
+                    
+                    # Create new data object with same parameters but new seed
+                    new_data = data(
+                        n_types_chargers=self.data.n_types_chargers,
+                        n_types_elec_buses=self.data.n_types_elec_buses,
+                        n_types_non_battery_buses=self.data.n_types_non_battery_buses,
+                        n_depots=len(self.data.D),
+                        n_stops=len([n for n in self.data.N if n.startswith("Stop")]),
+                        n_routes=len(self.data.R),
+                        upper_limit_charging_points=self.data.up_j[list(self.data.up_j.keys())[0]],
+                        upper_limit_charging_plugs=self.data.uc_c[list(self.data.uc_c.keys())[0]],
+                        seed=new_seed,
+                        n_types_old_elec_buses=len(self.data.BO),
+                        max_n_old_charging_plugs_per_stop=self.data.n_old_charging_plugs_per_stop,
+                        max_n_old_charging_devices_per_stop=self.data.n_old_charging_devices_per_stop,
+                        max_n_old_non_battery_buses_per_route=self.data.n_old_non_battery_buses_per_route,
+                        max_n_old_elec_buses_per_route=self.data.n_old_elec_buses_per_route,
+                        cc_ouc_pair_list=self.data.cc_uoc_pairs
+                    )
+                    
+                    # Create new instance with new data
+                    new_instance = OptimizationInstance(new_data)
+                    return new_instance.solve_algorithm()
+                
                 else:
-                    nb_sum += float(val)
-
-        # nob_rb terms
-        nob_sum = sum(self.nob_rb.get(r, {}).get(b, 0) for b in self.B_r[r])
-
-        # nv_rb terms
-        nv_sum = 0
-        for b in self.V_r[r]:
-            val = self.nv_rb[r, b]
-            if isinstance(val, gb.Var):
-                nv_sum += val.getAttr("UB")
-            else:
-                nv_sum += float(val)
-
-        rhs_val = self.lt_r[r] * (nb_sum + nob_sum + nv_sum)
-        lhs_val = self.L_r[r]
-
-        print(f"\n[DEBUG] Route {r}")
-        print(f"LHS (L_r) = {lhs_val}")
-        print(f"RHS (lt_r * (nb+nob+nv)) = {rhs_val}")
-        print(f"Feasible? {lhs_val >= rhs_val}")
-        '''
-
-        self.model.optimize()
-
-        if self.model.status == gb.GRB.INFEASIBLE:
-            self.model.computeIIS()
-            self.model.write("model.ilp")  # Optional: write model to inspect later
-            self.infeasible_constraints = [
-                c for c in self.model.getConstrs() if c.IISConstr
-            ]
-        else:
-            self.infeasible_constraints = []
-
+                    print(f"\nUnexpected model status: {self.model.status}")
+                    return self.model
+                    
+            except Exception as e:
+                print(f"\nError occurred: {str(e)}")
+                current_attempt += 1
+                
+        print(f"\nFailed to find feasible solution after {max_attempts} attempts")
         return self.model
 
     def solve_heuristic_HR(self):
