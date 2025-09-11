@@ -12,7 +12,7 @@ data_obj = data(
     n_routes=50,
     n_stops=70,
     seed=41,
-    cc_ouc_pair_list=[(44e6, 1e8)],
+    cc_ouc_pair_list=[(46e6, 33e6)],
     max_n_old_charging_devices_per_stop=3,
     max_n_old_charging_plugs_per_stop=3,
     max_n_old_elec_buses_per_route=2,
@@ -212,10 +212,67 @@ def print_capital_costs(model_algorithm, instance):
     print("=" * 30)
     print(f"${total:,.2f}")
 
+def print_variable_costs(model_algorithm, instance):
+    """Print detailed breakdown of variable operation costs"""
+    print("\nVariable Operation Costs Analysis:")
+    print("=" * 50)
+    
+    # Calculate costs by category
+    costs = {
+        'charging_stations': 0,
+        'charging_plugs': 0,
+        'electric_buses': 0,
+    }
+    
+    # Charging station operation costs
+    for j in instance.N:
+        costs['charging_stations'] += instance.vcc_j * instance.ns_j[j].X
+        # Charging plug operation costs
+        for c in instance.C:
+            costs['charging_plugs'] += instance.vcp_c * instance.np_jc[j,c].X
+    
+    # Electric buses operation costs (new + old)
+    for r in instance.R:
+        # New electric buses
+        for b in instance.B_r[r]:
+            bus_count = sum(instance.nb_rbc[r,b,c].X 
+                          for c in instance.C_b[b] 
+                          if (r,b,c) in instance.nb_rbc)
+            costs['electric_buses'] += instance.vcb_rb[r][b] * bus_count
+        
+        # Old electric buses
+        for b in instance.BO_r[r]:
+            if r in instance.nob_rb and b in instance.nob_rb[r]:
+                bus_count = sum(instance.nob_rbc[r][b][c] 
+                              for c in instance.C_b[b] 
+                              if c in instance.nob_rbc.get(r,{}).get(b,{}))
+                costs['electric_buses'] += instance.vcb_rb[r][b] * bus_count
+        
+    # Print detailed breakdown
+    print("\n1. Infrastructure Operation Costs:")
+    print("-" * 30)
+    print(f"Charging Stations: ${costs['charging_stations']:,.2f}")
+    print(f"Charging Plugs: ${costs['charging_plugs']:,.2f}")
+    subtotal_infra = costs['charging_stations'] + costs['charging_plugs']
+    print(f"Subtotal: ${subtotal_infra:,.2f}")
+
+    print("\n2. Bus Fleet Operation Costs:")
+    print("-" * 30)
+    print(f"Electric Buses: ${costs['electric_buses']:,.2f}")
+    subtotal_fleet = costs['electric_buses']
+    print(f"Subtotal: ${subtotal_fleet:,.2f}")
+
+    # Print grand total
+    total = sum(costs.values())
+    print("\nTotal Variable Operation Costs:")
+    print("=" * 30)
+    print(f"${total:,.2f}")
+
 # Print results
 solve_and_print_details(model_algorithm, "Algorithm")
 
 if model_algorithm.status == gb.GRB.OPTIMAL:
     # print_route_bus_types(model_algorithm, instance1)
     print_total_bus_counts(model_algorithm, instance1)
-    print_capital_costs(model_algorithm, instance1)  # Add this line
+    print_capital_costs(model_algorithm, instance1)
+    print_variable_costs(model_algorithm, instance1)

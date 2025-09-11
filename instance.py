@@ -207,18 +207,31 @@ class OptimizationInstance:
         for cc, uoc in self.cc_uoc_pairs:
             m.addConstr(
                 (
-                    
-                        #gb.quicksum(self.csta_j * self.ns_j[j] for j in self.N) +
-                        #gb.quicksum(self.ccp_c * self.np_jc[j, c] for j in self.N for c in self.C) +
-                        #gb.quicksum(gb.quicksum(
-                        #    self.cbus_b[b] * gb.quicksum(self.nb_rbc[r, b, c] for c in self.C_b[b]) for b in
-                        #    self.B_r[r]) for r in self.R) +
-                        #gb.quicksum(self.ccps_t * self.beta_t[t] for t in self.T if t not in self.TO) +
-                        
+                    # Charging station operation costs
+                    gb.quicksum(
+                        self.vcc_j * self.ns_j[j] + 
+                        gb.quicksum(self.vcp_c * self.np_jc[j, c] for c in self.C)
+                        for j in self.N
+                    ) +
+                    # Bus operation costs
+                    gb.quicksum(
                         gb.quicksum(
-                            self.vcc_j * self.ns_j[j] + gb.quicksum(self.vcp_c * self.np_jc[j, c] for c in self.C)
-                            for j in self.N) +
-                        gb.quicksum(gb.quicksum(self.vcb_rb[r][b] for b in self.B_r[r]) for r in self.R)
+                            # Variable costs for new electric buses
+                            self.vcb_rb[r][b] * (
+                                gb.quicksum(self.nb_rbc[r,b,c] 
+                                        for c in self.C_b[b] if (r,b,c) in self.nb_rbc)
+                            ) for b in self.B_r[r]
+                        ) for r in self.R
+                    ) +
+                    gb.quicksum(
+                        gb.quicksum(
+                            # Variable costs for old electric buses  
+                            self.vcb_rb[r][b] * (
+                                gb.quicksum(self.nob_rbc[r][b][c]
+                                        for c in self.C_b[b] if c in self.nob_rbc.get(r,{}).get(b,{}))
+                            ) for b in self.BO_r[r] if r in self.nob_rbc and b in self.nob_rbc[r]
+                        ) for r in self.R
+                    ) 
                 ) <= uoc,
                 name="variable_cost_constraint"
             )
