@@ -74,7 +74,7 @@ class data:
         self.nop_jc = self.create_nop_jc()  # Create the number of old c-type charging points at stop j
         self.up_j = self.create_up_j(upper_limit_charging_points)  # Define the upper limit for the number of charging points at stop j
         self.uc_c = self.create_uc_c(upper_limit_charging_plugs)  # Define the upper limit for the number of plug devices of c-type
-        self.p_c = 260  # price of one c-type charging point
+        self.p_c = 260  # output power of one c-type plug device
         self.utp_t = 20000  # output power of a power station at spot t ∈ T
         self.T_j = self.create_T_j()  # Create the mapping of feasible charging stops to their respective power station spots
         self.nv_rb_0 = self.create_nv_rb_0()  # Create the initial number of non-battery vehicles on route r
@@ -253,7 +253,7 @@ class data:
         
         # Generate random capacities between 40 and 80
         capacities = [
-            self.rng.randint(40, 80) 
+            self.rng.randint(40, 80)
             for _ in range(target_length)
         ]
         
