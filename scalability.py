@@ -1,7 +1,6 @@
 import gurobipy as gb
 from data import data
 from instance import OptimizationInstance
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -98,6 +97,12 @@ def run_scalability(n_istances=20, scaling_steps=2):
 
     return results, cc_values
 
+
+    """------------------------------------------------------------------------------"""
+    """----------------------------PLOTTING FUNCTIONS--------------------------------"""
+    """------------------------------------------------------------------------------"""
+
+
 def plot_scalability_results(results, cc_values):
     """Create a dual-axis plot showing objective values and runtime across instances."""
     # Extract data from results
@@ -134,7 +139,7 @@ def plot_scalability_results(results, cc_values):
 
     # Add legend
     lines = line1 + line2
-    labels = [l.get_label() for l in lines]
+    labels = [line.get_label() for line in lines]
     ax1.legend(lines, labels, loc='upper left', fontsize=10)
 
     # Add title and adjust layout
@@ -209,13 +214,9 @@ def plot_scalability_multi(results, cc_values):
     plt.savefig("scalability_multi.png", dpi=300, bbox_inches="tight")
     plt.show()
 
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt
-import numpy as np
 
 def plot_scalability_3d(results, cc_values):
     """3D plots for scalability analysis."""
-    instance_numbers = range(1, len(results) + 1)
 
     runtimes = [res["runtime"] if res["status"] == "OPTIMAL" else np.nan for res in results]
     objectives = [res["obj"] if res["status"] == "OPTIMAL" else np.nan for res in results]
