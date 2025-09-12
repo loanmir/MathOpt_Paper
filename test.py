@@ -4,15 +4,15 @@ from instance import OptimizationInstance
 
 
 data_obj = data(
-    n_types_chargers=4,
-    n_types_elec_buses=10,
-    n_types_non_battery_buses=3,
-    upper_limit_charging_points=150,
-    upper_limit_charging_plugs=150,
+    n_types_chargers=3,
+    n_types_elec_buses=5,
+    n_types_non_battery_buses=2,
+    upper_limit_charging_points=15,
+    upper_limit_charging_plugs=15,
     n_routes=20,
     n_stops=20,
     seed=41,
-    cc_ouc_pair_list=[(18e6, 14e6)],
+    cc_ouc_pair_list=[(16e6, 12e6)],
     max_n_old_charging_devices_per_stop=1,
     max_n_old_charging_plugs_per_stop=1,
     max_n_old_elec_buses_per_route=2,
@@ -251,7 +251,6 @@ def print_variable_costs(model_algorithm, instance):
         'charging_stations': 0,
         'charging_plugs': 0,
         'electric_buses': 0,
-        'power_stations': 0
     }
     
     # Charging station operation costs
@@ -277,11 +276,6 @@ def print_variable_costs(model_algorithm, instance):
                               for c in instance.C_b[b] 
                               if c in instance.nob_rbc.get(r,{}).get(b,{}))
                 costs['electric_buses'] += instance.vcb_rb[r][b] * bus_count
-    
-    # Power station operation costs
-    for t in instance.T:
-        if t not in instance.TO and instance.beta_t[t].X > 0:
-            costs['power_stations'] += instance.ccps_t * instance.beta_t[t].X
 
     # Print detailed breakdown
     print("\n1. Infrastructure Operation Costs:")
@@ -296,10 +290,6 @@ def print_variable_costs(model_algorithm, instance):
     print(f"Electric Buses: ${costs['electric_buses']:,.2f}")
     subtotal_fleet = costs['electric_buses']
     print(f"Subtotal: ${subtotal_fleet:,.2f}")
-
-    print("\n3. Power Station Operation Costs:")
-    print("-" * 30)
-    print(f"Power Stations: ${costs['power_stations']:,.2f}")
 
     # Print grand total
     total = sum(costs.values())
