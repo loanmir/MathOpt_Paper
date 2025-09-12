@@ -511,18 +511,23 @@ class OptimizationInstance:
                     name=f"Constraint_30_{j}_{c}"
                 )
 
+
         # Constraint (31)
-        lhs_terms = [(j, r, c) for r in self.R_jc.get((j, c), []) if (j, r, c) in self.nc_jrc]
+        for j in (j for j in self.N if j not in self.D):
+            for c in self.C:
+                lhs_terms = [(j, r, c) for r in self.R_jc.get((j, c), []) if (j, r, c) in self.nc_jrc]
 
-        print(f"[DEBUG C31] stop={j}, c={c}, lhs_terms={lhs_terms}, count={len(lhs_terms)}")
+                print(f"[DEBUG C31] stop={j}, c={c}, lhs_terms={lhs_terms}, count={len(lhs_terms)}")
 
-        if lhs_terms:
-            self.model.addConstr(
-                self.nc_jc[j, c] == gb.quicksum(self.nc_jrc[j, r, c] for (j, r, c) in lhs_terms) - self.nod_jc[j, c],
-                name=f"Constraint_31_{j}_{c}"
-            )
-        else:
-            print(f"[WARN C31] Stop {j}, charger {c}: no feasible (j,r,c). Skipping.")
+                if lhs_terms:
+                    self.model.addConstr(
+                        self.nc_jc[j, c] == gb.quicksum(self.nc_jrc[j, r, c] for (j, r, c) in lhs_terms) - self.nod_jc[j, c],
+                        name=f"Constraint_31_{j}_{c}"
+                    )
+                else:
+                    print(f"[WARN C31] Stop {j}, charger {c}: no feasible (j,r,c). Skipping.")
+
+
 
 
         # Constraint (32)

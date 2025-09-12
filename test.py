@@ -9,16 +9,16 @@ data_obj = data(
     n_types_non_battery_buses=3,
     upper_limit_charging_points=150,
     upper_limit_charging_plugs=150,
-    n_routes=30,
+    n_routes=20,
     n_stops=20,
     seed=41,
-    cc_ouc_pair_list=[(46e6, 33e6)],
-    max_n_old_charging_devices_per_stop=3,
-    max_n_old_charging_plugs_per_stop=3,
+    cc_ouc_pair_list=[(18e6, 14e6)],
+    max_n_old_charging_devices_per_stop=1,
+    max_n_old_charging_plugs_per_stop=1,
     max_n_old_elec_buses_per_route=2,
     max_n_old_non_battery_buses_per_route=2,
     n_types_old_elec_buses=2,
-    n_depots=3
+    n_depots=2
 )
 
 instance1 = OptimizationInstance(data_obj)
@@ -160,18 +160,20 @@ def print_capital_costs(model_algorithm, instance):
         'charging_stations': {},
         'charging_plugs': {},
         'electric_buses': {},
+        'power_stations': {},
+        'power_lines': {},
     }
     
     # Charging station costs by location
     for j in instance.N:
         if instance.ns_j[j].X > 0:
-            costs['charging_stations'][j] = instance.csta_j[j] * instance.ns_j[j].X
+            costs['charging_stations'][j] = instance.csta_j * instance.ns_j[j].X
             
     # Charging plug costs by type
     for j in instance.N:
         for c in instance.C:
             if instance.np_jc[j,c].X > 0:
-                cost = instance.ccp_c[c] * instance.np_jc[j,c].X
+                cost = instance.ccp_c * instance.np_jc[j,c].X
                 costs['charging_plugs'][c] = costs['charging_plugs'].get(c, 0) + cost
     
     # Electric bus costs by type
@@ -181,6 +183,19 @@ def print_capital_costs(model_algorithm, instance):
                 if (r,b,c) in instance.nb_rbc and instance.nb_rbc[r,b,c].X > 0:
                     cost = instance.cbus_b[b] * instance.nb_rbc[r,b,c].X
                     costs['electric_buses'][b] = costs['electric_buses'].get(b, 0) + cost
+
+    # Power station costs
+    for t in instance.T:
+        if t not in instance.TO and instance.beta_t[t].X > 0:
+            costs['power_stations'][t] = instance.ccps_t * instance.beta_t[t].X
+    
+    # Power line connection costs
+    for t in instance.T:
+        if t not in instance.TO:
+            for j in instance.N:
+                if j not in instance.NO and instance.gamma_tj[t,j].X > 0:
+                    key = f"{t}->{j}"
+                    costs['power_lines'][key] = instance.cl_tj * instance.gamma_tj[t,j].X
 
     # Print detailed breakdown
     print("\n1. Charging Infrastructure:")
@@ -206,8 +221,22 @@ def print_capital_costs(model_algorithm, instance):
         print(f"Type {b_type}: ${cost:,.2f}")
     print(f"Subtotal: ${total_electric:,.2f}")
 
+    print("\n3. Power Infrastructure:")
+    print("-" * 30)
+    print("\na) Power Stations:")
+    total_power = sum(costs['power_stations'].values())
+    for t, cost in costs['power_stations'].items():
+        print(f"Station {t}: ${cost:,.2f}")
+    print(f"Subtotal Power Stations: ${total_power:,.2f}")
+    
+    print("\nb) Power Lines:")
+    total_lines = sum(costs['power_lines'].values())
+    for connection, cost in costs['power_lines'].items():
+        print(f"Connection {connection}: ${cost:,.2f}")
+    print(f"Subtotal Power Lines: ${total_lines:,.2f}")
+
     # Print grand total
-    total = total_stations + total_plugs + total_electric
+    total = total_stations + total_plugs + total_electric + total_power + total_lines
     print("\nTotal Capital Investment:")
     print("=" * 30)
     print(f"${total:,.2f}")
@@ -222,6 +251,7 @@ def print_variable_costs(model_algorithm, instance):
         'charging_stations': 0,
         'charging_plugs': 0,
         'electric_buses': 0,
+        'power_stations': 0
     }
     
     # Charging station operation costs
@@ -247,7 +277,12 @@ def print_variable_costs(model_algorithm, instance):
                               for c in instance.C_b[b] 
                               if c in instance.nob_rbc.get(r,{}).get(b,{}))
                 costs['electric_buses'] += instance.vcb_rb[r][b] * bus_count
-        
+    
+    # Power station operation costs
+    for t in instance.T:
+        if t not in instance.TO and instance.beta_t[t].X > 0:
+            costs['power_stations'] += instance.ccps_t * instance.beta_t[t].X
+
     # Print detailed breakdown
     print("\n1. Infrastructure Operation Costs:")
     print("-" * 30)
@@ -262,11 +297,58 @@ def print_variable_costs(model_algorithm, instance):
     subtotal_fleet = costs['electric_buses']
     print(f"Subtotal: ${subtotal_fleet:,.2f}")
 
+    print("\n3. Power Station Operation Costs:")
+    print("-" * 30)
+    print(f"Power Stations: ${costs['power_stations']:,.2f}")
+
     # Print grand total
     total = sum(costs.values())
     print("\nTotal Variable Operation Costs:")
     print("=" * 30)
     print(f"${total:,.2f}")
+
+def print_infrastructure_details(model_algorithm, instance):
+    """Print detailed breakdown of charging infrastructure placement"""
+    print("\nCharging Infrastructure Details:")
+    print("=" * 50)
+    
+    # Count charging stations by location
+    stations = {
+        j: instance.ns_j[j].X 
+        for j in instance.N 
+        if instance.ns_j[j].X > 0
+    }
+    
+    # Count charging plugs by location and type
+    plugs = {}
+    for j in instance.N:
+        for c in instance.C:
+            if instance.np_jc[j,c].X > 0:
+                if j not in plugs:
+                    plugs[j] = {}
+                plugs[j][c] = instance.np_jc[j,c].X
+
+    # Print charging stations
+    print("\n1. Charging Stations:")
+    print("-" * 30)
+    total_stations = sum(stations.values())
+    for j, count in stations.items():
+        print(f"Location {j}: {int(count)} units")
+    print(f"Total Stations: {int(total_stations)} units")
+
+    # Print charging plugs
+    print("\n2. Charging Plugs:")
+    print("-" * 30)
+    total_plugs = 0
+    for j in sorted(plugs.keys()):
+        print(f"\nLocation {j}:")
+        location_total = 0
+        for c, count in plugs[j].items():
+            print(f"  Type {c}: {int(count)} units")
+            location_total += count
+        print(f"  Subtotal: {int(location_total)} units")
+        total_plugs += location_total
+    print(f"\nTotal Charging Plugs: {int(total_plugs)} units")
 
 # Print results
 solve_and_print_details(model_algorithm, "Algorithm")
@@ -276,3 +358,4 @@ if model_algorithm.status == gb.GRB.OPTIMAL:
     print_total_bus_counts(model_algorithm, instance1)
     print_capital_costs(model_algorithm, instance1)
     print_variable_costs(model_algorithm, instance1)
+    print_infrastructure_details(model_algorithm, instance1)

@@ -294,7 +294,7 @@ class data:
         print("=========================")
         
         for bus in self.B:
-            d_b_MAX[bus] = self.rng.randint(8, 40)
+            d_b_MAX[bus] = self.rng.randint(30, 80)
             print(f"{bus}: {d_b_MAX[bus]} km")
         
         return d_b_MAX
@@ -1259,7 +1259,7 @@ class data:
             coords[stop_name] = (x, y)
             G.add_node(stop_name, 
                     type="stop", 
-                    charging_possible=random.random() > 0.2,  # 80% chance of charging
+                    charging_possible=random.random() > 0.99,  # 80% chance of charging
                     pos=(x, y))
         
         # Connect depots to nearby stops
