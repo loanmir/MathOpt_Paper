@@ -4,12 +4,7 @@ from gurobipy import Model
 import heuristics as he
 from data import data
 import logging
-#from data import G, R, D, N, NO, T, T_j, TO, TO_j, B, BO, C, cap_b, B_r, C_b, pi_r, dem_r, dem_0_r, ub_rb, nv_rb_0, V_r, co_b, n_rbc, cc_uoc_pairs, csta_j, ccp_c, cbus_b, ccps_t, cl_tj, vcc_j, vcp_c, vcb_rb, nod_jc, utp_t, p_c, up_j, nop_jc, uc_c, R_jc, L_r, ut_r, lt_r, nob_rb, nob_rbc, B_rc, ct_rjbc, nc_jrc_max, noc_jrc_ct, S_rbc_s
 
-# REMEMBER!! -> Most of data will be taken from the data.py file -> So we will need to remove the "self." every time we access some input(CONSTANT)
-# For the "dynamic inputs", so the one we can define as we wish -> They must be constructed within the constructor "__init_", and so they will be accessed through self.!!
-
- # Add logging for Constraints 40 and 61
 
 logging.basicConfig(filename='constraints_log.txt', level=logging.DEBUG)
 

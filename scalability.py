@@ -215,30 +215,57 @@ def plot_scalability_multi(results, cc_values):
     plt.show()
 
 
-def plot_scalability_3d(results, cc_values):
-    """3D plots for scalability analysis."""
+def plot_scalability_extended(results, cc_values):
+    """
+    Extended scalability plots:
+    1. Problem size (vars, constraints)
+    2. Runtime vs Problem Size
+    3. 3D Runtime vs CC vs Problem Size
+    """
+    instance_numbers = range(1, len(results) + 1)
 
     runtimes = [res["runtime"] if res["status"] == "OPTIMAL" else np.nan for res in results]
-    objectives = [res["obj"] if res["status"] == "OPTIMAL" else np.nan for res in results]
     n_vars = [res.get("n_vars", np.nan) for res in results]
     n_cons = [res.get("n_constraints", np.nan) for res in results]
 
-    # 1️⃣ Runtime vs Vars vs Constraints
-    fig = plt.figure(figsize=(14, 6))
-    ax = fig.add_subplot(121, projection="3d")
-    ax.scatter(n_vars, n_cons, runtimes, c="blue", marker="o", s=50)
-    ax.set_xlabel("Variables")
-    ax.set_ylabel("Constraints")
-    ax.set_zlabel("Runtime (s)")
-    ax.set_title("Runtime vs Problem Size (Vars & Constraints)")
+    x_labels = [f"{i}\n(cc={cc:.0f}M)" for i, cc in zip(instance_numbers, cc_values)]
 
-    # 2️⃣ Objective vs Capital Cost vs Runtime
-    ax2 = fig.add_subplot(122, projection="3d")
-    ax2.scatter(cc_values, runtimes, objectives, c="green", marker="^", s=50)
-    ax2.set_xlabel("Capital Cost (M)")
-    ax2.set_ylabel("Runtime (s)")
-    ax2.set_zlabel("Objective Value")
-    ax2.set_title("Objective vs Capital Cost vs Runtime")
+    # === 1) Problem size growth ===
+    plt.figure(figsize=(12, 6))
+    plt.plot(instance_numbers, n_vars, marker="o", label="Variables")
+    plt.plot(instance_numbers, n_cons, marker="s", label="Constraints")
+    plt.xlabel("Instance (Capital Cost in M)")
+    plt.ylabel("Model Size")
+    plt.title("Scalability: Variables and Constraints Growth")
+    plt.xticks(instance_numbers, x_labels, rotation=45, ha="right")
+    plt.legend()
+    plt.grid(True, linestyle="--", alpha=0.6)
+    plt.tight_layout()
+    plt.savefig("scalability_size.png", dpi=300, bbox_inches="tight")
+    plt.show()
+
+    # === 2) Runtime vs Problem Size ===
+    plt.figure(figsize=(10, 6))
+    plt.scatter(n_vars, runtimes, c="blue", s=60, label="Runtime vs Vars")
+    plt.scatter(n_cons, runtimes, c="orange", s=60, marker="s", label="Runtime vs Cons")
+    plt.xlabel("Problem Size (Vars / Cons)")
+    plt.ylabel("Runtime (s)")
+    plt.title("Runtime vs Problem Size")
+    plt.legend()
+    plt.grid(True, linestyle="--", alpha=0.6)
+    plt.tight_layout()
+    plt.savefig("scalability_runtime_vs_size.png", dpi=300, bbox_inches="tight")
+    plt.show()
+
+    # === 3) 3D plot: CC vs Vars vs Runtime ===
+    fig = plt.figure(figsize=(12, 7))
+    ax = fig.add_subplot(111, projection="3d")
+    ax.scatter(cc_values, n_vars, runtimes, c="green", s=60, marker="^")
+
+    ax.set_xlabel("Capital Cost (M)")
+    ax.set_ylabel("Number of Variables")
+    ax.set_zlabel("Runtime (s)")
+    ax.set_title("3D Scalability: Runtime vs CC vs Problem Size")
 
     plt.tight_layout()
     plt.savefig("scalability_3d.png", dpi=300, bbox_inches="tight")
@@ -250,7 +277,7 @@ if __name__ == "__main__":
     results, cc_values = run_scalability()
     plot_scalability_results(results, cc_values)
     plot_scalability_multi(results, cc_values)
-    plot_scalability_3d(results, cc_values)
+    plot_scalability_extended(results, cc_values)
 
 
 
