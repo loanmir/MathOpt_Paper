@@ -3,6 +3,12 @@ from data import data
 from instance import OptimizationInstance
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+
+# Create Plots directory if it doesn't exist
+plots_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Plots")
+if not os.path.exists(plots_dir):
+    os.makedirs(plots_dir)
 
 
 def run_scalability(n_istances=40, scaling_steps=5):
@@ -139,8 +145,8 @@ def plot_scalability_results(results, cc_values):
     # Adjust layout to prevent label cutoff
     plt.subplots_adjust(bottom=0.15)
 
-    # Save the plot
-    plt.savefig('scalability_results.png', dpi=300, bbox_inches='tight')
+    # Save the plot in Plots directory
+    plt.savefig(os.path.join(plots_dir, 'scalability_results.png'), dpi=300, bbox_inches='tight')
     plt.show()
 
     # Print numerical results with cc values
@@ -201,7 +207,8 @@ def plot_scalability_multi(results, cc_values):
 
     fig.suptitle("Scalability Analysis Across Problem Instances", fontsize=14, y=0.95)
     plt.tight_layout()
-    plt.savefig("scalability_multi.png", dpi=300, bbox_inches="tight")
+    # Save the plot in Plots directory
+    plt.savefig(os.path.join(plots_dir, "scalability_multi.png"), dpi=300, bbox_inches="tight")
     plt.show()
 
 
@@ -231,7 +238,8 @@ def plot_scalability_extended(results, cc_values):
     plt.legend()
     plt.grid(True, linestyle="--", alpha=0.6)
     plt.tight_layout()
-    plt.savefig("scalability_size.png", dpi=300, bbox_inches="tight")
+    # Save the plot in Plots directory
+    plt.savefig(os.path.join(plots_dir, "scalability_size.png"), dpi=300, bbox_inches="tight")
     plt.show()
 
     # === 2) Runtime vs Problem Size ===
@@ -244,7 +252,8 @@ def plot_scalability_extended(results, cc_values):
     plt.legend()
     plt.grid(True, linestyle="--", alpha=0.6)
     plt.tight_layout()
-    plt.savefig("scalability_runtime_vs_size.png", dpi=300, bbox_inches="tight")
+    # Save the plot in Plots directory
+    plt.savefig(os.path.join(plots_dir, "scalability_runtime_vs_size.png"), dpi=300, bbox_inches="tight")
     plt.show()
 
     # === 3) 3D plot: CC vs Vars vs Runtime ===
@@ -258,7 +267,8 @@ def plot_scalability_extended(results, cc_values):
     ax.set_title("3D Scalability: Runtime vs CC vs Problem Size")
 
     plt.tight_layout()
-    plt.savefig("scalability_3d.png", dpi=300, bbox_inches="tight")
+    # Save the plot in Plots directory
+    plt.savefig(os.path.join(plots_dir, "scalability_3d.png"), dpi=300, bbox_inches="tight")
     plt.show()
 
 
