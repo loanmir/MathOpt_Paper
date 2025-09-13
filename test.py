@@ -12,8 +12,8 @@ data_obj = data(
     n_routes=26,
     n_stops=23,
     n_depots=2,
-    seed=12,
-    cc_ouc_pair_list=[(2e7, 1e7)],
+    seed=13,
+    cc_ouc_pair_list=[(40e6, 22.5e6)],
     max_n_old_charging_devices_per_stop=3,
     max_n_old_charging_plugs_per_stop=3,
     max_n_old_elec_buses_per_route=2,
@@ -22,6 +22,7 @@ data_obj = data(
 )
 
 instance1 = OptimizationInstance(data_obj)
+data_obj.visualize_graph(data_obj.G, data_obj.coords)
 
 # Set parameters
 for instance in [instance1]:

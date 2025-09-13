@@ -3,7 +3,6 @@ import data_inizialization as di
 import math
 import random
 import copy
-from itertools import combinations
 
 # ================================
 # 1. GRAPH CREATION
@@ -1283,9 +1282,15 @@ class data:
     # Example usage:
     def visualize_graph(self, G, coords):
         """
-        Visualize the generated graph.
+        Visualize the generated graph and save it in the Plots folder.
         """
         import matplotlib.pyplot as plt
+        import os
+        
+        # Create Plots directory if it doesn't exist
+        plots_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Plots")
+        if not os.path.exists(plots_dir):
+            os.makedirs(plots_dir)
         
         plt.figure(figsize=(12, 12))
         
@@ -1316,5 +1321,12 @@ class data:
         plt.legend()
         plt.grid(True)
         plt.axis('equal')
-        plt.show()
+        
+        # Save plot with seed number in filename
+        filename = f"network_graph_seed_{self.seed}.png"
+        filepath = os.path.join(plots_dir, filename)
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()  # Close the figure to free memory
+        
+        print(f"\nGraph saved as: {filepath}")
 

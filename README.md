@@ -1,5 +1,36 @@
 # MathOpt_Paper
 
+## Project implementation explained
+
+### Dataset creation
+
+data_obj is used to generate a dataset for the ILP problem.
+In the following paragraph we explain the varius inputs that can be modified and what they mean:
+
+    data_obj = data(
+        n_types_chargers=
+        n_types_elec_buses=
+        n_types_non_battery_buses=
+        upper_limit_charging_points=
+        upper_limit_charging_plugs=
+        n_routes=
+        n_stops=
+        n_depots=
+        seed=
+        cc_ouc_pair_list=
+        max_n_old_charging_devices_per_stop=
+        max_n_old_charging_plugs_per_stop=
+        max_n_old_elec_buses_per_route=
+        max_n_old_non_battery_buses_per_route=
+        n_types_old_elec_buses=
+    )
+
+## Using data.py
+
+## Using Scalability.py
+
+
+
 ## Decision Variables
 
 ### Main decision variables

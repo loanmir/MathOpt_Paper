@@ -4,6 +4,56 @@ from instance import OptimizationInstance
 import matplotlib.pyplot as plt
 import numpy as np
 
+
+def run_scalability(n_istances=20, scaling_steps=2):
+    """Run experiments with increasing problem sizes."""
+    results = []
+    cc_values = []  # Store actual cc values
+
+    for i in range(1, n_istances + 1):
+        current_increase = i * scaling_steps
+        moltipl_constant = 1e6
+        cc_value = (20+i)*moltipl_constant 
+        uoc_value = (10+i)*moltipl_constant 
+        cc_values.append(cc_value/moltipl_constant)
+
+        data_obj = data(
+            n_types_chargers=3,
+            n_types_elec_buses=10,
+            n_types_non_battery_buses=3,
+            upper_limit_charging_points=150,
+            upper_limit_charging_plugs=150,
+            n_routes=10+i,
+            n_stops=10+i,
+            seed=42,
+            cc_ouc_pair_list=[(cc_value, uoc_value)],
+            max_n_old_charging_devices_per_stop=3,
+            max_n_old_charging_plugs_per_stop=3,
+            max_n_old_elec_buses_per_route=2,
+            max_n_old_non_battery_buses_per_route=2,
+            n_types_old_elec_buses=2,
+            n_depots=2
+        )
+        size_label = f"Scale-{current_increase}"
+
+        # Creating optimization instances
+        instance_algorithm = OptimizationInstance(data_obj)
+
+        # Set parameters for fair comparison
+        for inst in [instance_algorithm]:            # instance_HR, instance_HRBC -> this need to be added
+            inst.model.setParam("OutputFlag", 0)  # keep console clean
+            inst.model.setParam("MIPGap", 0)
+            inst.model.setParam("IntFeasTol", 1e-9)
+            inst.model.setParam("FeasibilityTol", 1e-9)
+
+        # Solving each problem variant
+        model_algorithm = instance_algorithm.solve_algorithm()
+
+        # Collect results
+        results.append(solve_and_get_details(model_algorithm, f"Model_{i}", size_label))
+
+    return results, cc_values
+
 def solve_and_get_details(model, name, size_label):
     """Solve the model and return details in a dict"""
     result = {
@@ -41,61 +91,6 @@ def solve_and_get_details(model, name, size_label):
         result["status"] = str(model.Status)
 
     return result
-
-
-
-def run_scalability(n_istances=20, scaling_steps=2):
-    """Run experiments with increasing problem sizes."""
-    results = []
-    cc_values = []  # Store actual cc values
-
-    for i in range(1, n_istances + 1):
-        current_increase = i * scaling_steps
-
-        moltipl_constant = 1e6
-        
-        cc_value = (20+i)*moltipl_constant  # Store the cc value
-        
-        # Append cc_value to the list (convert to millions)
-        cc_values.append(cc_value/moltipl_constant)
-        
-        # Scale problem size
-        data_obj = data(
-            n_types_chargers=3,
-            n_types_elec_buses=10,
-            n_types_non_battery_buses=3,
-            upper_limit_charging_points=150,
-            upper_limit_charging_plugs=150,
-            n_routes=10+i,
-            n_stops=10+i,
-            seed=42,
-            cc_ouc_pair_list=[(cc_value, (10+i)*moltipl_constant)],
-            max_n_old_charging_devices_per_stop=3,
-            max_n_old_charging_plugs_per_stop=3,
-            max_n_old_elec_buses_per_route=2,
-            max_n_old_non_battery_buses_per_route=2,
-            n_types_old_elec_buses=2,
-            n_depots=2
-        )
-        size_label = f"Scale-{current_increase}"
-
-        # Creating optimization instances
-        instance_algorithm = OptimizationInstance(data_obj)
-
-        # Set parameters for fair comparison
-        for inst in [instance_algorithm]:            # instance_HR, instance_HRBC -> this need to be added
-            inst.model.setParam("OutputFlag", 0)  # keep console clean
-            inst.model.setParam("MIPGap", 0)
-            inst.model.setParam("IntFeasTol", 1e-9)
-            inst.model.setParam("FeasibilityTol", 1e-9)
-
-        # Solving each problem variant
-        model_algorithm = instance_algorithm.solve_algorithm()
-
-        # Collect results
-        results.append(solve_and_get_details(model_algorithm, f"Model_{i}", size_label))
-
-    return results, cc_values
 
 
     """------------------------------------------------------------------------------"""
