@@ -83,13 +83,7 @@ class OptimizationInstance:
         self._set_objective()
 
     def _define_variables(self):
-        '''
-        R, B_r, C_b = self.R, self.B_r, self.C_b
-        B, C, N, D, NO = self.B, self.C, self.N, self.D, self.NO
-        pi_r, T, dem_r = self.pi_r, self.T, self.dem_r
-        ub_rb, nv_rb_0, V_r, co_b = self.ub_rb, self.nv_rb_0, self.V_r, self.co_b
-        n_rbc = self.n_rbc
-        '''
+
 
         self.nb_rbc = self.model.addVars(
             [(r, b, c) for r in self.R for b in self.B_r[r] for c in self.C_b[b]],
@@ -419,22 +413,7 @@ class OptimizationInstance:
                     gb.quicksum(self.y_rbc[r, b, c] for c in self.C_b[b]) for b in self.B_r[r] if (r,b,c) in self.y_rbc),           # updated for n_rbc
                     name=f"Constraint_24_{r}"
             )
-        '''
-        # Constraint (25)
-        for r in self.R:
-            lhs_terms = [(b, c) for b in self.B_r[r] for c in self.C_b[b] if (r, b, c) in self.y_rbc]
-            lhs_count = len(lhs_terms)
 
-            print(f"[DEBUG C25] r={r}, lhs_terms={lhs_terms}, lhs_count={lhs_count}, "
-                  f"y_r_exists={(r in self.y_r)}, y_r={self.y_r[r]}")
-
-            B_r_size = len(self.B_r[r])
-            self.model.addConstr(
-                B_r_size * self.y_r[r] >= gb.quicksum(
-                    gb.quicksum(self.y_rbc[r, b, c] for c in self.C_b[b]) for b in self.B_r[r] if (r,b,c) in self.y_rbc),           # updated for n_rbc
-                    name=f"Constraint_25_{r}"
-            )
-        '''
 
         # Constraint (25)
         for r in self.R:
