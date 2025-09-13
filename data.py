@@ -38,8 +38,8 @@ class data:
         self.n_old_charging_devices_per_stop = max_n_old_charging_devices_per_stop  # Maximum  Number of old charging devices per stop
         self.n_old_non_battery_buses_per_route = max_n_old_non_battery_buses_per_route  # Maximum Number of old non-battery buses per route
         self.n_old_elec_buses_per_route = max_n_old_elec_buses_per_route  # Maximum Number of old electric buses per route
-        self.G, self.coords = self.create_random_graph(n_depots=n_depots, n_stops=n_stops)  # Create the graph with nodes and edges
         self.R = self.create_R_set()  # Create the set of routes
+        self.G, self.coords = self.create_random_graph(n_depots=n_depots, n_stops=n_stops)  # Create the graph with nodes and edges
         self.D = self.create_D_set()  # Create the set of depots
         self.N = self.create_N_set()  # Create the set of feasible charging stops
         self.NO = self.create_NO_set()  # Create the set of old charger stops
@@ -1185,99 +1185,187 @@ class data:
     def create_random_graph(self, n_depots=2, n_stops=23):
         """
         Create a random graph with specified number of depots and stops.
-        All edge distances are random values between 8 and 35.
+        Tries different seeds and multiple attempts per seed.
         """
         import networkx as nx
         import random
         import numpy as np
 
-        random.seed(self.seed)
-        np.random.seed(self.seed)
+        max_seeds = 20  # Number of different seeds to try
+        max_attempts_per_seed = 50  # Number of attempts per seed
+        base_seed = self.seed  # Store original seed
         
-        G = nx.Graph()
-        
-        # Generate random coordinates for nodes in a 100x100 grid
-        coords = {}
-        
-        # Place depots somewhat centrally
-        depot_radius = 30
-        for i in range(n_depots):
-            angle = 2 * np.pi * i / n_depots
-            x = 50 + depot_radius * np.cos(angle)
-            y = 50 + depot_radius * np.sin(angle)
-            depot_name = f"Depot{i+1}"
-            coords[depot_name] = (x, y)
-            G.add_node(depot_name, 
-                    type="depot", 
-                    charging_possible=True, 
-                    pos=(x, y))
-        
-        # Place stops in a wider area
-        for i in range(n_stops):
-            while True:
-                x = random.uniform(0, 200)
-                y = random.uniform(0, 200)
-                # Check minimum distance from other nodes
-                too_close = False
-                for existing_coord in coords.values():
-                    if np.sqrt((x - existing_coord[0])**2 + (y - existing_coord[1])**2) < 10:
-                        too_close = True
-                        break
-                if not too_close:
-                    break
+        for seed_increment in range(max_seeds):
+            current_seed = base_seed + seed_increment
+            print(f"\n=== Trying seed {current_seed} ===")
+            
+            # Set random seeds
+            random.seed(current_seed)
+            np.random.seed(current_seed)
+            
+            for attempt in range(max_attempts_per_seed):
+                print(f"\nAttempt {attempt + 1}/{max_attempts_per_seed} with seed {current_seed}")
                 
-            stop_name = f"Stop{i+1}"
-            coords[stop_name] = (x, y)
-            G.add_node(stop_name, 
-                    type="stop", 
-                    charging_possible=random.random() > 0.99,  # 80% chance of charging
-                    pos=(x, y))
+                try:
+                    # Create graph
+                    G = nx.Graph()
+                    coords = {}
+                    
+                    # Place depots
+                    depot_radius = 30
+                    for i in range(n_depots):
+                        angle = 2 * np.pi * i / n_depots
+                        x = 50 + depot_radius * np.cos(angle)
+                        y = 50 + depot_radius * np.sin(angle)
+                        depot_name = f"Depot{i+1}"
+                        coords[depot_name] = (x, y)
+                        G.add_node(depot_name, type="depot", charging_possible=True, pos=(x, y))
+                    
+                    # Place stops
+                    for i in range(n_stops):
+                        while True:
+                            x = random.uniform(0, 100)
+                            y = random.uniform(0, 100)
+                            too_close = False
+                            for existing_coord in coords.values():
+                                if np.sqrt((x - existing_coord[0])**2 + (y - existing_coord[1])**2) < 10:
+                                    too_close = True
+                                    break
+                            if not too_close:
+                                break
+                        
+                        stop_name = f"Stop{i+1}"
+                        coords[stop_name] = (x, y)
+                        G.add_node(stop_name, 
+                                type="stop", 
+                                charging_possible=random.random() > 0.99,
+                                pos=(x, y))
+                    
+                    # Connect depots to stops
+                    for depot in [n for n in G.nodes() if G.nodes[n]['type'] == 'depot']:
+                        stops = [n for n in G.nodes() if G.nodes[n]['type'] == 'stop']
+                        distances = [(stop, np.sqrt((coords[depot][0] - coords[stop][0])**2 + 
+                                                (coords[depot][1] - coords[stop][1])**2))
+                                for stop in stops]
+                        distances.sort(key=lambda x: x[1])
+                        
+                        n_connections = random.randint(3, 5)
+                        for stop, _ in distances[:n_connections]:
+                            G.add_edge(depot, stop, distance=random.randint(8, 35))
+                    
+                    # Connect stops
+                    stops = [n for n in G.nodes() if G.nodes[n]['type'] == 'stop']
+                    for stop in stops:
+                        other_stops = [s for s in stops if s != stop]
+                        distances = [(other, np.sqrt((coords[stop][0] - coords[other][0])**2 + 
+                                                (coords[stop][1] - coords[other][1])**2))
+                                for other in other_stops]
+                        distances.sort(key=lambda x: x[1])
+                        
+                        n_connections = random.randint(2, 4)
+                        for other, _ in distances[:n_connections]:
+                            if not G.has_edge(stop, other):
+                                G.add_edge(stop, other, distance=random.randint(8, 35))
+                    
+                    # Ensure connectivity
+                    if not nx.is_connected(G):
+                        components = list(nx.connected_components(G))
+                        for i in range(len(components)-1):
+                            comp1, comp2 = components[i], components[i+1]
+                            for n1 in comp1:
+                                for n2 in comp2:
+                                    if not G.has_edge(n1, n2):
+                                        G.add_edge(n1, n2, distance=random.randint(8, 35))
+                                        break
+                                if nx.is_connected(G):
+                                    break
+                    
+                    # Verify graph
+                    if not nx.is_connected(G):
+                        print("[WARN] Generated graph is not connected")
+                        continue
+                    
+                    #if not self.check_route_feasibility(G, len(self.R)):
+                        print("[WARN] Routes not feasible with current topology")
+                        continue
+                    
+                    print(f"\n[SUCCESS] Valid graph created with seed {current_seed} on attempt {attempt + 1}")
+                    self.visualize_graph(G, coords)
+                    return G, coords
+                    
+                except Exception as e:
+                    print(f"[ERROR] Failed attempt: {str(e)}")
+                    continue
         
-        # Connect depots to nearby stops
-        for depot in [n for n in G.nodes() if G.nodes[n]['type'] == 'depot']:
-            stops = [n for n in G.nodes() if G.nodes[n]['type'] == 'stop']
-            distances = [(stop, np.sqrt((coords[depot][0] - coords[stop][0])**2 + 
-                                    (coords[depot][1] - coords[stop][1])**2))
-                        for stop in stops]
-            distances.sort(key=lambda x: x[1])
-            
-            n_connections = random.randint(3, 5)
-            for stop, _ in distances[:n_connections]:
-                # Random distance between 8 and 35
-                G.add_edge(depot, stop, distance=random.randint(8, 35))
+        raise ValueError(f"Failed to create valid graph after {max_seeds} seeds with {max_attempts_per_seed} attempts each")
         
-        # Connect stops to their nearest neighbors
+    def check_route_feasibility(self, G, n_routes):
+        """
+        Check if the graph topology can support the required number of routes.
+        
+        Args:
+            G (networkx.Graph): The network graph
+            n_routes (int): Number of routes needed
+        
+        Returns:
+            bool: True if graph can support n_routes, False otherwise
+        """
+        # 1. Check basic connectivity requirements
+        depots = [n for n in G.nodes() if G.nodes[n]['type'] == 'depot']
         stops = [n for n in G.nodes() if G.nodes[n]['type'] == 'stop']
-        for stop in stops:
-            other_stops = [s for s in stops if s != stop]
-            distances = [(other, np.sqrt((coords[stop][0] - coords[other][0])**2 + 
-                                    (coords[stop][1] - coords[other][1])**2))
-                        for other in other_stops]
-            distances.sort(key=lambda x: x[1])
-            
-            n_connections = random.randint(2, 4)
-            for other, _ in distances[:n_connections]:
-                if not G.has_edge(stop, other):
-                    # Random distance between 8 and 35
-                    G.add_edge(stop, other, distance=random.randint(8, 35))
         
-        # Ensure graph is connected
-        if not nx.is_connected(G):
-            components = list(nx.connected_components(G))
-            for i in range(len(components)-1):
-                comp1, comp2 = components[i], components[i+1]
-                best_edge = None
-                for n1 in comp1:
-                    for n2 in comp2:
-                        if not G.has_edge(n1, n2):
-                            best_edge = (n1, n2)
-                            break
-                if best_edge:
-                    # Random distance between 8 and 35
-                    G.add_edge(best_edge[0], best_edge[1], distance=random.randint(8, 35))
-
-        # self.visualize_graph(G, coords)
-        return G, coords
+        # At least 2 stops per depot for minimal routes
+        min_stops_per_depot = 2
+        for depot in depots:
+            nearby_stops = list(G.neighbors(depot))
+            nearby_stops = [s for s in nearby_stops if G.nodes[s]['type'] == 'stop']
+            if len(nearby_stops) < min_stops_per_depot:
+                print(f"[WARN] Depot {depot} has insufficient stop connections: {len(nearby_stops)} < {min_stops_per_depot}")
+                return False
+        
+        # 2. Check stop connectivity
+        for stop in stops:
+            connections = list(G.neighbors(stop))
+            connections = [n for n in connections if G.nodes[n]['type'] == 'stop']
+            if len(connections) < 2:  # Each stop should connect to at least 2 other stops
+                print(f"[WARN] Stop {stop} has insufficient connections: {len(connections)} < 2")
+                return False
+        
+        # 3. Calculate maximum possible routes
+        max_routes = 0
+        for depot in depots:
+            # Get stops connected to this depot
+            depot_stops = [n for n in G.neighbors(depot) if G.nodes[n]['type'] == 'stop']
+            
+            # For each stop connected to depot
+            for start_stop in depot_stops:
+                # Find possible end stops (excluding start_stop)
+                other_stops = [s for s in depot_stops if s != start_stop]
+                
+                # For each potential end stop
+                for end_stop in other_stops:
+                    # Check if path exists between start and end
+                    try:
+                        path = nx.shortest_path(G, start_stop, end_stop)
+                        if len(path) >= 3:  # At least one intermediate stop
+                            max_routes += 1
+                    except nx.NetworkXNoPath:
+                        continue
+        
+        # 4. Check if we can support required routes
+        if max_routes < n_routes:
+            print(f"[WARN] Graph can only support {max_routes} routes, but {n_routes} are needed")
+            return False
+        
+        # 5. Check average node degree for route flexibility
+        avg_degree = sum(dict(G.degree()).values()) / len(G)
+        if avg_degree < 3:  # Each node should average at least 3 connections
+            print(f"[WARN] Average node degree too low: {avg_degree:.2f} < 3")
+            return False
+        
+        print(f"[INFO] Graph can support up to {max_routes} routes (needed: {n_routes})")
+        print(f"[INFO] Average node degree: {avg_degree:.2f}")
+        return True
 
     # Example usage:
     def visualize_graph(self, G, coords):

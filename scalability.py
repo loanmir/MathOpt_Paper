@@ -5,26 +5,26 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def run_scalability(n_istances=20, scaling_steps=2):
+def run_scalability(n_istances=40, scaling_steps=5):
     """Run experiments with increasing problem sizes."""
     results = []
     cc_values = []  # Store actual cc values
 
     for i in range(1, n_istances + 1):
         current_increase = i * scaling_steps
-        moltipl_constant = 1e6
+        moltipl_constant = 1e7
         cc_value = (20+i)*moltipl_constant 
         uoc_value = (10+i)*moltipl_constant 
         cc_values.append(cc_value/moltipl_constant)
 
         data_obj = data(
-            n_types_chargers=3,
-            n_types_elec_buses=10,
+            n_types_chargers=2+(i//10),
+            n_types_elec_buses=3+(i//5),
             n_types_non_battery_buses=3,
-            upper_limit_charging_points=150,
-            upper_limit_charging_plugs=150,
-            n_routes=10+i,
-            n_stops=10+i,
+            upper_limit_charging_points=1500,
+            upper_limit_charging_plugs=1500,
+            n_routes=5+i,
+            n_stops=5+i,
             seed=42,
             cc_ouc_pair_list=[(cc_value, uoc_value)],
             max_n_old_charging_devices_per_stop=3,
@@ -81,12 +81,7 @@ def solve_and_get_details(model, name, size_label):
 
     elif model.Status == gb.GRB.INFEASIBLE:
         result["status"] = "INFEASIBLE"
-        model.computeIIS()
-        print(f"\n{name} with {size_label}: INFEASIBLE")
-        print("Constraints in IIS:")
-        for c in model.getConstrs():
-            if c.IISConstr:
-                print(f" - {c.ConstrName}")
+
     else:
         result["status"] = str(model.Status)
 
