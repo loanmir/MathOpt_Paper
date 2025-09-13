@@ -1,6 +1,3 @@
-
-import numpy as np
-import math
 import networkx as nx
 
 # Distance function (assumes direct edges)
@@ -14,65 +11,9 @@ def get_distance(G: nx.Graph, u, v):
     except nx.NetworkXNoPath:
         raise ValueError(f"No path exists between {u} and {v}")
 
-
 def get_middle_value_of_set(s:list):
     middle = s[len(s) // 2]
     return middle
-
-
-
-
-
-def compute_nc_jrc_max(route_r, stop_j, charge_type_c, B_rc, ct_rjbc_dict, ltr_r):
-    """
-    Parameters:
-    - route_r: ID of the route
-    - stop_j: ID of the stop
-    - charge_type_c: charging type
-    - B_rc: list of bus types b used on route r with charger type c
-    - ct_rjbc_dict: nested dict ct_rjbc[r][j][b][c]
-    - ltr_r: minimum traffic interval on route r
-
-    Returns:
-    - nc_jrc_max: upper bound on plug devices at stop j, route r, charger type c
-    """
-    max_ct = 0
-    for b in B_rc:
-        try:
-            ct = ct_rjbc_dict[route_r][stop_j][b][charge_type_c]
-            max_ct = max(max_ct, ct)
-        except KeyError:
-            continue  # skip if any key is missing
-    nc_jrc_max = math.ceil(max_ct / ltr_r) if ltr_r > 0 else 0
-    print(f"Computed nc_jrc_max for route {route_r}, stop {stop_j}, charger {charge_type_c}: {nc_jrc_max}, with max_ct = {max_ct}")
-    return nc_jrc_max
-
-def compute_noc_jrc_ct(route_r, stop_j, charge_type_c, BO_rc, ct_rjbc_dict, ltr_r):
-    """
-    Parameters:
-    - route_r: ID of the route
-    - stop_j: ID of the stop
-    - charge_type_c: charging type
-    - B_rc: list of bus types b used on route r with charger type c
-    - ctrjbc_dict: dictionary {(j, r, b, c): ctrjbc} with charging times
-    - ltr_r: minimum traffic interval on route r
-
-    Returns:
-    - nc_jrc_max: upper bound on plug devices at stop j, route r, charger type c
-    """
-    max_ct = 0
-    for b in BO_rc:
-        try:
-            ct = ct_rjbc_dict[route_r][stop_j][b][charge_type_c]
-            max_ct = max(max_ct, ct)
-        except KeyError:
-            continue
-    noc_jrc_ct = max_ct / ltr_r if ltr_r > 0 else 0
-    print(f"Computed noc_jrc_ct for route {route_r}, stop {stop_j}, charger {charge_type_c}: {noc_jrc_ct}, with max_ct = {max_ct}")
-    return noc_jrc_ct
-
-
-
 
 def generate_feasible_scenarios(route_id, stops, stop_distances, b_type, c_type, dmax_b):
     """Generate ordered feasible charging stop sequences"""
